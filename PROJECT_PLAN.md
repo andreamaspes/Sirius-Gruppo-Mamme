@@ -55,3 +55,5 @@ Realizzare una prima versione semplice ma completa che dimostri il funzionamento
 | Integrazione           | 2 giorni | Giorni 6-7 |
 | Testing e debug        | 1 giorno | Giorno 8   |
 | Rifinitura finale      | 1 giorno | Giorno 9   |
+
+![Gantt](https://github.com/andreamaspes/Sirius-Gruppo-Mamme/blob/22845ea59331ad2c95f1d152854f0cfc5969b0e1/immagine.png)
