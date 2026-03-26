@@ -49,12 +49,12 @@ Realizzare una prima versione semplice ma completa che dimostri il funzionamento
 
 | Attività                | Durata | Periodo     |
 |------------------------|--------|------------|
-| Setup progetto         | 1 sett. | sett. 1   |
-| Backend base           | 2 sett. | sett. 2-3 |
-| Frontend base          | 2 sett. | sett. 4-5 |
-| Integrazione           | 2 sett. | sett. 6-7 |
-| Testing e debug        | 1 sett. | sett. 8   |
-| Rifinitura finale      | 1 sett. | sett. 9   |
+| Setup progetto         | 1 GG. | GG.. 1   |
+| Backend base           | 2 GG.. | GG.. 2-3 |
+| Frontend base          | 2 GG.. | GG.. 4-5 |
+| Integrazione           | 2 GG.. | GG.. 6-7 |
+| Testing e debug        | 1 GG.. | GG.. 8   |
+| Rifinitura finale      | 1 GG.. | GG.. 9   |
 
 ![Gantt](https://github.com/andreamaspes/Sirius-Gruppo-Mamme/blob/22845ea59331ad2c95f1d152854f0cfc5969b0e1/immagine.png)
 
