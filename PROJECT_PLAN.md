@@ -57,3 +57,6 @@ Realizzare una prima versione semplice ma completa che dimostri il funzionamento
 | Rifinitura finale      | 1 sett. | sett. 9   |
 
 ![Gantt](https://github.com/andreamaspes/Sirius-Gruppo-Mamme/blob/22845ea59331ad2c95f1d152854f0cfc5969b0e1/immagine.png)
+
+![GanttEXEL](https://github.com/andreamaspes/Sirius-Gruppo-Mamme/blob/main/GANTEXEL.png)
+
