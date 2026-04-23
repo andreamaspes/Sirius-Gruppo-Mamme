@@ -1,81 +1,69 @@
 # PROJECT PLAN - Sirius
 
-## 2. MVP (Minimal Viable Product)
-
-Il prodotto minimo funzionante includerà:
-- Visualizzazione dati da database
-- Grafici per visualizzazione dati
-  -potenza reale turbina
-  -velocità vento
-- Comunicazione tra frontend e backend 
-
-Obiettivo:
-Realizzare una versione che visualizzi tramite grafici i dati presi dal database
-
----
-
-## 3.Stack Tecnologico
+## Stack Tecnologico
 
 ### Backend
-Data e Database
-   - Import csv
-   - Modellazione db
-   - Query dati
-API e Meteo
-   - Integrazione open meteo API
-   - Endpoint rest
-   - Logica sicronizzazione dati
+  - ASP.NET Core (C#) -> API REST
+  - Entity Framework Core -> ORM per gestione database
+  - HttpClient -> chiamate a Open Meteo API
+  - SQL -> database relazionale
 
 ### Frontend
-UI E Grafici
-  - Grafici (primevue)
-  - Visualizzazione dati
-Integrazione API
-  - Fetch dati dal backend
-  - Gestione stato
-  - Eventuali filtri (date range)
+  - Nuxt 4 (Vue 3) -> framework principale
+  - PrimeVue -> componenti UI (grafici, tabelle), oppure -> Vanilla JS
 
-### API Esterne
-7. Open Meteo API -> dati meteo (vento medio giornaliero)
+### API Esterne 
+  - Open Meteo API -> dati meteo (vento medio giornaliero)
+    
+## MVP (Minimal Viable Product)
+
+- Implementazione Dati Turbina (CSV)
+- Integrazione Dati su Database
+- Integrazione Dati Meteo (vento)
+- Integrazione Dati (tempo)
+- Visualizzazione Grafico
+
+### Output MVP
+   - Grafico con -> Potenza reale turbina, Velocità vento
+   - Dati coerenti all'intervallo temporale
 
 ---
-
 ### 4. WBS
-1. Analisi
-   - studio requisiti
-   - definizione struttura dati
-   - definizione architettura
+#### 1. Analisi
+   - Studio requisiti
+   - Definizione struttura dati
+   - Definizione architettura
 ---
-2. Backend
-   - setup progetto ASP.NET Core
-   - creazione database
-   - import CSV
-   - integrazione API REST
-   - sincronizazione dati temporali
+#### 2. Backend
+   - Setup progetto ASP.NET Core
+   - Creazione database
+   - Import CSV
+   - Integrazione API REST
+   - Sincronizazione dati temporali
 ---
-3. Frontend Development
-   - setup nuxt 4
-   - configurazione PrimeVue
-   - creazione layout base
-   - fetch dati da API
-   - implementazione grafico
-   - test visualizzazioni 
+#### 3. Frontend Development
+   - Setup nuxt 4
+   - Configurazione PrimeVue
+   - Creazione layout base
+   - Fetch dati da API
+   - Implementazione grafico
+   - Test visualizzazioni 
 ---
-4. Testing
-   - test backend API
-   - test integrazione frontend-backend
-   - verifica corretta dati 
+#### 4. Testing
+   - Test backend API
+   - Test integrazione frontend-backend
+   - VGerifica corretta dati 
 ---
-5. Analisi dati
-   - confronto vento con potenza
-   - identificazione anomalie
-   - commento risultati
+#### 5. Analisi dati
+   - Confronto vento con potenza
+   - Identificazione anomalie
+   - Commento risultati
 ---
-6. Efficienza
-   - implementazione interpolazione lineare
-   - calcolo potenza teorica
-   - calcolo efficienza
-   - calcolo risultati 
+#### 6. Efficienza
+   - Implementazione interpolazione lineare
+   - Calcolo potenza teorica
+   - Calcolo efficienza
+   - Calcolo risultati 
     
 ---
 
@@ -89,8 +77,6 @@ Integrazione API
 | Integrazione           | 2 SETT. | SETT. 6-7 |
 | Testing e debug        | 1 SETT. | SETT. 8   |
 | Rifinitura finale      | 1 SETT. | SETT. 9   |
-
-![Gantt](https://github.com/andreamaspes/Sirius-Gruppo-Mamme/blob/22845ea59331ad2c95f1d152854f0cfc5969b0e1/immagine.png)
 
 ![GanttEXEL](https://github.com/andreamaspes/Sirius-Gruppo-Mamme/blob/main/GANTEXEL.png)
 
