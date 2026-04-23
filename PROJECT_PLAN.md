@@ -52,7 +52,7 @@
 #### 4. Testing
    - Test backend API
    - Test integrazione frontend-backend
-   - VGerifica corretta dati 
+   - Verifica corretta dati 
 ---
 #### 5. Analisi dati
    - Confronto vento con potenza
