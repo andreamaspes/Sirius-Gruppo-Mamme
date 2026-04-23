@@ -3,14 +3,13 @@
 ## 2. MVP (Minimal Viable Product)
 
 Il prodotto minimo funzionante includerà:
-
-- Sistema di login utente
 - Visualizzazione dati da database
-- Inserimento dati tramite form
-- Comunicazione tra frontend e backend (API REST)
+- Grafici per visualizzazione dati
+- 
+- Comunicazione tra frontend e backend 
 
 Obiettivo:
-Realizzare una prima versione semplice ma completa che dimostri il funzionamento dell'intero sistema.
+Realizzare una versione che visualizzi tramite grafici i dati presi dal database
 
 ---
 
