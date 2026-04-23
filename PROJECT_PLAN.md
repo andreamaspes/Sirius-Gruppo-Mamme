@@ -28,7 +28,7 @@
    - Dati coerenti all'intervallo temporale
 
 ---
-### 4. WBS
+## WBS
 #### 1. Analisi
    - Studio requisiti
    - Definizione struttura dati
