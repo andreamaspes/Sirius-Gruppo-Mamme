@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grafico Turbina</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            padding: 24px;
+        }
+
+        .chart-wrap {
+            width: 80%;
+            margin: auto;
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 12px;
+            color: #b00020;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-wrap">
+        <canvas id="turbineChart"></canvas>
+    </div>
+    <div id="status"></div>
+
+    <script>
+        let turbineChart = null;
+
+        const API_BASE_URL = 'https://localhost:7089';
+        const FALLBACK_DATA = [
+            { data: '2026-05-06 10:00', power: 820, windspeed: 7.9 },
+            { data: '2026-05-06 11:00', power: 910, windspeed: 8.6 },
+            { data: '2026-05-06 12:00', power: 980, windspeed: 9.2 },
+            { data: '2026-05-06 13:00', power: 890, windspeed: 8.1 },
+            { data: '2026-05-06 14:00', power: 760, windspeed: 7.1 }
+        ];
+
+        async function getTurbineData() {
+            if (window.location.protocol === 'file:') {
+                return {
+                    data: FALLBACK_DATA,
+                    message: 'File aperto localmente: uso dati demo. Avvia frontend+backend per dati reali.'
+                };
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/turbine-data`);
+                if (!response.ok) {
+                    throw new Error(`Errore API: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('Nessun dato ricevuto dal backend.');
+                }
+
+                return { data, message: '' };
+            } catch (error) {
+                return {
+                    data: FALLBACK_DATA,
+                    message: `Backend non raggiungibile (${error.message}). Uso dati demo.`
+                };
+            }
+        }
+
+        async function fetchAndChart() {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = '';
+
+            try {
+                const result = await getTurbineData();
+                const data = result.data;
+                statusEl.style.color = result.message ? '#a15c00' : '#0b7a28';
+                statusEl.textContent = result.message || 'Dati caricati correttamente.';
+
+                const labels = data.map(row => row.data);
+                const powerValues = data.map(row => row.power);
+                const windValues = data.map(row => row.windspeed);
+
+                const canvas = document.getElementById('turbineChart');
+                const ctx = canvas.getContext('2d');
+
+                if (turbineChart) {
+                    turbineChart.destroy();
+                }
+
+                turbineChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Potenza Reale (kW)',
+                                data: powerValues,
+                                borderColor: 'blue',
+                                yAxisID: 'y',
+                                tension: 0.2
+                            },
+                            {
+                                label: 'Velocità Vento (m/s)',
+                                data: windValues,
+                                borderColor: 'green',
+                                yAxisID: 'y1',
+                                tension: 0.2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: { type: 'linear', display: true, position: 'left' },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                statusEl.style.color = '#b00020';
+                statusEl.textContent = `Impossibile caricare il grafico: ${error.message}`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchAndChart);
+    </script>
+</body>
+</html>
