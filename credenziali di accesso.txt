@@ -1,1 +1,4 @@
-credenziali di accesso
+
+API:
+https://localhost:7024/active-power-data
+https://localhost:7024/windspeed-data
