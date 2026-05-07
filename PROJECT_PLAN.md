@@ -72,17 +72,17 @@
     - Query dati
       
 - **Dell'uomo: API & Meteo**
-    -Integrazione Open Meteo API
-    -Logica sincronizzazione dati
+    - Integrazione Open Meteo API
+    - Logica sincronizzazione dati
   
 #### Frontend (Maspes, Dell'uomo)
 - **Maspes: Grafici**
-    -Grafici (VanillaJS)
-    -Visualizzazione dati
+    - Grafici (VanillaJS)
+    - Visualizzazione dati
   
   - **Dell'Uomo: Integrazione API** 
-    -Fetch dati del backend
-    -Gestione stato  
+    - Fetch dati del backend
+    - Gestione stato  
 ---
 
 ## 4. GANTT
