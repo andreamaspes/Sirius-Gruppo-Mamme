@@ -1,13 +1,12 @@
 ﻿using Microsoft.Data.SqlClient;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace BozziPrimaAPI
+namespace SiriusBackend
 {
-    public class VentoDAL
+    public class TurbinaDAL
     {
-        private List<Vento> _ElencoVento = new List<Vento>();
+        private readonly List<DatiTurbina> _ElencoDati = new List<DatiTurbina>();
 
-        public List<Vento> GetAll()
+        public List<DatiTurbina> GetAll()
         {
             // recupera i dati dal DB
 
@@ -18,25 +17,24 @@ namespace BozziPrimaAPI
             {
                 connection.Open();
 
-                string sql = "SELECT movie_id,title FROM  dbo.Vento WHERE Windspeed IS NOT NULL";
-
+                string sql = "SELECT Data, ActivePower FROM dbo.Energia WHERE ActivePower IS NOT NULL";
                 using (SqlCommand command = new SqlCommand(sql, connection))
                 {
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        _ElencoVento.Clear();
+                        _ElencoDati.Clear();
                         while (reader.Read())
                         {
-                            Vento vento = new Vento();
-                            vento.WindSpeed = reader.GetDecimal(0);
-                            vento.Date = reader.GetDateTime(0);
-                            _ElencoVento.Add(vento);
+                            DatiTurbina dato = new DatiTurbina();
+                            dato.Data = reader.GetDateTime(0);
+                            dato.ActivePower = reader.GetDecimal(1);
+                            _ElencoDati.Add(dato);
                         }
                     }
                 }
             }
 
-            return _ElencoVento;
+            return _ElencoDati;
         }
     }
 }

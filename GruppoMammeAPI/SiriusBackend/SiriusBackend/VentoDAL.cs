@@ -1,42 +1,38 @@
-﻿using Microsoft.Data.SqlClient;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Microsoft.Data.SqlClient;
 
-namespace BozziPrimaAPI
+namespace SiriusBackend
 {
     public class VentoDAL
     {
-        private List<Vento> _ElencoVento = new List<Vento>();
+        private readonly List<DatiVento> _ElencoDati = new List<DatiVento>();
 
-        public List<Vento> GetAll()
+        public List<DatiVento> GetAll()
         {
             // recupera i dati dal DB
-
-
 
             // mi connetto al DB
             using (SqlConnection connection = new SqlConnection("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=DBSirius;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False"))
             {
                 connection.Open();
 
-                string sql = "SELECT movie_id,title FROM  dbo.Vento WHERE Windspeed IS NOT NULL";
-
+                string sql = "SELECT Data, Windspeed FROM dbo.Vento WHERE Windspeed IS NOT NULL";
                 using (SqlCommand command = new SqlCommand(sql, connection))
                 {
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        _ElencoVento.Clear();
+                        _ElencoDati.Clear();
                         while (reader.Read())
                         {
-                            Vento vento = new Vento();
-                            vento.WindSpeed = reader.GetDecimal(0);
-                            vento.Date = reader.GetDateTime(0);
-                            _ElencoVento.Add(vento);
+                            DatiVento dato = new DatiVento();
+                            dato.Data = reader.GetDateTime(0);
+                            dato.Windspeed = reader.GetDecimal(1);
+                            _ElencoDati.Add(dato);
                         }
                     }
                 }
             }
 
-            return _ElencoVento;
+            return _ElencoDati;
         }
     }
 }

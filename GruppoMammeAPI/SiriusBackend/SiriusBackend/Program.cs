@@ -1,18 +1,14 @@
-using BozziPrimaAPI;
-using BozziPrimaAPI.DATI;
-using BozziPrimaAPI.Models;
+using SiriusBackend;
+using SiriusBackend.Dati;
+using SiriusBackend.Models;
 using Microsoft.EntityFrameworkCore;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
-using BozziPrimaAPI.DATI;
-using BozziPrimaAPI.Models;
-using BozziPrimaAPI;
-using System.Formats.Asn1;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<SiriusContest>(options =>
+builder.Services.AddDbContext<SiriusContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddCors(options =>
@@ -34,15 +30,15 @@ app.UseCors();
 // Applica migrazioni e importa CSV all'avvio
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<SiriusContest>();
-
+    var context = scope.ServiceProvider.GetRequiredService<SiriusContext>();
+        
     try
     {
         // Assicura che il database sia creato e migrazioni applicate
         context.Database.Migrate();
 
         // Importa dati di energia
-        if (!context.Turbina.Any())
+        if (!context.Energia.Any())
         {
             var csvPath = Path.Combine(AppContext.BaseDirectory, "Dati", "Dati.csv");
 
@@ -112,9 +108,9 @@ app.UseHttpsRedirection();
 
 app.MapGet("/", () => Results.Ok("API Project Work Sirius"));
 
-app.MapGet("/active-power-data", (EnergiaDAL energiaDAL) =>
+app.MapGet("/active-power-data", (TurbinaDAL energiaDAL) =>
 {
-    List<DatiEnergia> elenco = energiaDAL.GetAll();
+    List<DatiTurbina> elenco = energiaDAL.GetAll();
     return Results.Ok(elenco);
 });
 

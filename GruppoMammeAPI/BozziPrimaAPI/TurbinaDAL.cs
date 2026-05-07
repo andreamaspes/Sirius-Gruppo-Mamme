@@ -10,12 +10,14 @@ namespace BozziPrimaAPI
         private List<Turbina> _ElencoTurbina = new List<Turbina>();
 
         public List<Turbina> GetAll()
-        {
+        {//recupera tutti i dati dalla tabella TBTurbina e li restituisce come lista di oggetti Turbina
+
+            //adesso mi collego con il db
             using (SqlConnection connection = new SqlConnection("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=DBSirius;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False"))
             {
                 connection.Open();
 
-                string sql = "SELECT Power, Date FROM TBTurbina ORDER BY Date";
+                string sql = "SELECT Power, Date FROM dbo.Energia WHERE ActivePower IS NOT NULL";
 
                 using (SqlCommand command = new SqlCommand(sql, connection))
                 {
