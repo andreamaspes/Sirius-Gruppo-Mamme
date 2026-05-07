@@ -4,13 +4,12 @@
 
 ### Backend
   - ASP.NET Core (C#) -> API REST
-  - Entity Framework Core -> ORM per gestione database
   - HttpClient -> chiamate a Open Meteo API
   - SQL -> database relazionale
 
 ### Frontend
-  - Nuxt 4 (Vue 3) -> framework principale
-  - PrimeVue -> componenti UI (grafici, tabelle), oppure -> Vanilla JS
+  - Nuxt 4 -> framework principale
+  - Vanilla JS
 
 ### API Esterne 
   - Open Meteo API -> dati meteo (vento medio giornaliero)
@@ -43,7 +42,7 @@
 ---
 #### 3. Frontend Development
    - Setup nuxt 4
-   - Configurazione PrimeVue
+   - Configurazione VanillaJS
    - Creazione layout base
    - Fetch dati da API
    - Implementazione grafico
@@ -64,7 +63,26 @@
    - Calcolo potenza teorica
    - Calcolo efficienza
    - Calcolo risultati 
-    
+
+## Suddivisione Del Team (3 Persone)
+#### Backend (Garberoglio, Dell'uomo)
+- **Garberoglio: Database**
+    - Import CSV
+    - Modellazione DB
+    - Query dati
+      
+- **Dell'uomo: API & Meteo**
+    - Integrazione Open Meteo API
+    - Logica sincronizzazione dati
+  
+#### Frontend (Maspes, Dell'uomo)
+- **Maspes: Grafici**
+    - Grafici (VanillaJS)
+    - Visualizzazione dati
+  
+- **Dell'Uomo: Integrazione API**
+  - Fetch dati del backend
+  - Gestione stato  
 ---
 
 ## 4. GANTT
