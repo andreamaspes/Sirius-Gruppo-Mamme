@@ -1,138 +1,565 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Grafico Turbina</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            padding: 24px;
-        }
-
-        .chart-wrap {
-            width: 80%;
-            margin: auto;
-        }
-
-        #status {
-            text-align: center;
-            margin-top: 12px;
-            color: #b00020;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wind Turbine Stats — Classe 5°</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chart-wrap">
-        <canvas id="turbineChart"></canvas>
+
+<!-- Top bar section containing the brand information and technology pills -->
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon"><i class="ti ti-windmill"></i></div>
+    <div>
+      <div class="brand-name">Wind Turbine Stats</div>
+      <div class="brand-sub">41.030°N · 15.595°E · Campania</div>
     </div>
-    <div id="status"></div>
+  </div>
+  <div class="topbar-pills">
+    <span class="pill pill-blue"><i class="ti ti-code"></i> ASP.NET Core</span>
+    <span class="pill pill-blue"><i class="ti ti-brand-vue"></i> NUXT 4</span>
+    <span class="pill pill-green"><i class="ti ti-check"></i> Task 1</span>
+    <span class="pill pill-amber"><i class="ti ti-star"></i> Task 2 opzionale</span>
+  </div>
+</div>
 
-    <script>
-        let turbineChart = null;
+<!-- APP LAYOUT -->
+<div class="app-layout">
+<!-- Navigation sidebar with buttons to switch between different panels -->  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Navigazione</div>
 
-        const API_BASE_URL = 'https://localhost:7089';
-        const FALLBACK_DATA = [
-            { data: '2026-05-06 10:00', power: 820, windspeed: 7.9 },
-            { data: '2026-05-06 11:00', power: 910, windspeed: 8.6 },
-            { data: '2026-05-06 12:00', power: 980, windspeed: 9.2 },
-            { data: '2026-05-06 13:00', power: 890, windspeed: 8.1 },
-            { data: '2026-05-06 14:00', power: 760, windspeed: 7.1 }
-        ];
+    <button class="nav-btn active" onclick="goTo('home')">
+      <i class="ti ti-home"></i> Panoramica
+    </button>
+    <button class="nav-btn" onclick="goTo('db')">
+      <i class="ti ti-database"></i> Database
+    </button>
+    <button class="nav-btn" onclick="goTo('chart')">
+      <i class="ti ti-chart-line"></i> Grafici
+    </button>
+    <button class="nav-btn" onclick="goTo('eff')">
+      <i class="ti ti-calculator"></i> Efficienza
+      <span class="nav-badge">Task 2</span>
+    </button>
+    <button class="nav-btn" onclick="goTo('anom')">
+      <i class="ti ti-alert-triangle"></i> Anomalie
+      <span class="nav-badge" id="sb-anom-count">—</span>
+    </button>
 
-        async function getTurbineData() {
-            if (window.location.protocol === 'file:') {
-                return {
-                    data: FALLBACK_DATA,
-                    message: 'File aperto localmente: uso dati demo. Avvia frontend+backend per dati reali.'
-                };
-            }
+    
+  </nav>
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/turbine-data`);
-                if (!response.ok) {
-                    throw new Error(`Errore API: ${response.status} ${response.statusText}`);
-                }
+  <!-- Main content area containing metrics and panels for different views -->
+<!-- MAIN CONTENT -->
+  <main class="main">
 
-                const data = await response.json();
-                if (!Array.isArray(data) || data.length === 0) {
-                    throw new Error('Nessun dato ricevuto dal backend.');
-                }
+    <!-- Metrics section displaying key performance indicators -->
+<!-- METRICS (always visible) -->
+    <div class="metrics">
+      <div class="metric blue">
+        <div class="metric-label"><i class="ti ti-bolt"></i> Potenza media</div>
+        <div class="metric-value" id="m-pow">—</div>
+        <div class="metric-unit">kW / giorno</div>
+      </div>
+      <div class="metric cyan">
+        <div class="metric-label"><i class="ti ti-wind"></i> Vento medio</div>
+        <div class="metric-value" id="m-wind">—</div>
+        <div class="metric-unit">m/s</div>
+      </div>
+      <div class="metric green">
+        <div class="metric-label"><i class="ti ti-chart-line"></i> Efficienza</div>
+        <div class="metric-value" id="m-eff">—</div>
+        <div class="metric-unit">% media</div>
+      </div>
+      <div class="metric red">
+        <div class="metric-label"><i class="ti ti-alert-triangle"></i> Anomalie</div>
+        <div class="metric-value" id="m-anom">—</div>
+        <div class="metric-unit">giorni</div>
+      </div>
+    </div>
 
-                return { data, message: '' };
-            } catch (error) {
-                return {
-                    data: FALLBACK_DATA,
-                    message: `Backend non raggiungibile (${error.message}). Uso dati demo.`
-                };
-            }
-        }
+    <!-- Home panel with project overview, flow, stack, and buttons -->
+<!-- ─── PANEL: HOME ─── -->
+    <div id="p-home" class="panel active">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-route"></i> Flusso dati del progetto</div>
+        <div class="flow">
+          <div class="flow-step fs-blue">
+            <i class="ti ti-file-spreadsheet"></i>
+            <div class="fs-title">CSV upload</div>
+            <div class="fs-sub">Unix ms + kW</div>
+          </div>
+          <i class="ti ti-chevron-right flow-arrow"></i>
+          <div class="flow-step fs-green">
+            <i class="ti ti-database"></i>
+            <div class="fs-title">SQL Server</div>
+            <div class="fs-sub">TurbineData</div>
+          </div>
+          <i class="ti ti-chevron-right flow-arrow"></i>
+          <div class="flow-step fs-amber">
+            <i class="ti ti-cloud-download"></i>
+            <div class="fs-title">Open-Meteo</div>
+            <div class="fs-sub">wind_speed_10m</div>
+          </div>
+          <i class="ti ti-chevron-right flow-arrow"></i>
+          <div class="flow-step fs-green">
+            <i class="ti ti-database"></i>
+            <div class="fs-title">SQL Server</div>
+            <div class="fs-sub">WeatherData</div>
+          </div>
+          <i class="ti ti-chevron-right flow-arrow"></i>
+          <div class="flow-step fs-purple">
+            <i class="ti ti-chart-bar"></i>
+            <div class="fs-title">Dashboard</div>
+            <div class="fs-sub">NUXT + PrimeVue</div>
+          </div>
+        </div>
+      </div>
 
-        async function fetchAndChart() {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = '';
+      <div class="card">
+        <div class="card-title"><i class="ti ti-stack-2"></i> Stack tecnologico</div>
+        <div class="stack-grid">
+          <div class="stack-card">
+            <div class="stack-icon" style="background:rgba(59,158,255,0.15);color:var(--blue)"><i class="ti ti-server"></i></div>
+            <div class="stack-card-txt">
+              <div class="sc-name">ASP.NET Core</div>
+              <div class="sc-sub">REST API · EF Core · HttpClient</div>
+            </div>
+          </div>
+          <div class="stack-card">
+            <div class="stack-icon" style="background:rgba(0,229,160,0.12);color:var(--green)"><i class="ti ti-brand-vue"></i></div>
+            <div class="stack-card-txt">
+              <div class="sc-name">NUXT 4 + PrimeVue</div>
+              <div class="sc-sub">Chart.js · Composables · SSR</div>
+            </div>
+          </div>
+          <div class="stack-card">
+            <div class="stack-icon" style="background:rgba(255,178,63,0.12);color:var(--amber)"><i class="ti ti-database"></i></div>
+            <div class="stack-card-txt">
+              <div class="sc-name">SQL Server Developer</div>
+              <div class="sc-sub">2 tabelle · FK per data</div>
+            </div>
+          </div>
+          <div class="stack-card">
+            <div class="stack-icon" style="background:rgba(0,212,255,0.12);color:var(--cyan)"><i class="ti ti-cloud"></i></div>
+            <div class="stack-card-txt">
+              <div class="sc-name">Open-Meteo API</div>
+              <div class="sc-sub">Lat 41.030 · Lon 15.595 · free</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            try {
-                const result = await getTurbineData();
-                const data = result.data;
-                statusEl.style.color = result.message ? '#a15c00' : '#0b7a28';
-                statusEl.textContent = result.message || 'Dati caricati correttamente.';
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="goTo('chart')"><i class="ti ti-chart-line"></i> Apri grafici</button>
+        <button class="btn btn-purple" onclick="goTo('eff')"><i class="ti ti-calculator"></i> Calcola efficienza</button>
+        <button class="btn btn-danger" onclick="goTo('anom')"><i class="ti ti-alert-triangle"></i> Anomalie</button>
+        <button class="btn btn-success" onclick="askCode('backend')"><i class="ti ti-code"></i> Genera codice C# ↗</button>
+      </div>
+    </div>
 
-                const labels = data.map(row => row.data);
-                const powerValues = data.map(row => row.power);
-                const windValues = data.map(row => row.windspeed);
+    <!-- Database panel showing table schemas and API endpoint -->
+<!-- ─── PANEL: DATABASE ─── -->
+    <div id="p-db" class="panel">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-table"></i> Schema tabelle SQL Server</div>
+        <div class="db-grid">
+          <div class="db-table">
+            <div class="db-table-header blue">TurbineData</div>
+            <div class="db-row"><span class="db-col-name key">Id</span><span class="db-col-type">PK · int identity</span></div>
+            <div class="db-row"><span class="db-col-name">TimestampMs</span><span class="db-col-type">bigint NOT NULL</span></div>
+            <div class="db-row"><span class="db-col-name">DateUtc</span><span class="db-col-type">date NOT NULL</span></div>
+            <div class="db-row"><span class="db-col-name">ActivePowerKw</span><span class="db-col-type">decimal(10,2)</span></div>
+          </div>
+          <div class="db-table">
+            <div class="db-table-header green">WeatherData</div>
+            <div class="db-row"><span class="db-col-name key">Id</span><span class="db-col-type">PK · int identity</span></div>
+            <div class="db-row"><span class="db-col-name fk">Date</span><span class="db-col-type">FK · date NOT NULL</span></div>
+            <div class="db-row"><span class="db-col-name">WindSpeedAvg</span><span class="db-col-type">decimal(5,2)</span></div>
+            <div class="db-row"><span class="db-col-name">WindSpeedMax</span><span class="db-col-type">decimal(5,2)</span></div>
+          </div>
+        </div>
+        <div class="join-box">
+          JOIN TurbineData t ON t.DateUtc = w.Date
+        </div>
+      </div>
 
-                const canvas = document.getElementById('turbineChart');
-                const ctx = canvas.getContext('2d');
+      <div class="card">
+        <div class="card-title"><i class="ti ti-api"></i> Endpoint Open-Meteo</div>
+        <div class="codebox">
+          <span class="code-kw">GET</span> https://api.open-meteo.com/v1/forecast?<br>
+          &nbsp;&nbsp;latitude=<span class="code-val">41.030</span>&amp;longitude=<span class="code-val">15.595</span><br>
+          &nbsp;&nbsp;&amp;daily=<span class="code-str">wind_speed_10m_max</span><br>
+          &nbsp;&nbsp;&amp;timezone=<span class="code-str">Europe/Rome</span><br>
+          &nbsp;&nbsp;&amp;start_date=<span class="code-val">YYYY-MM-DD</span>&amp;end_date=<span class="code-val">YYYY-MM-DD</span>
+        </div>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn btn-primary" onclick="askCode('httpclient')"><i class="ti ti-code"></i> Codice HttpClient C# ↗</button>
+          <button class="btn btn-success" onclick="askCode('sdk')"><i class="ti ti-package"></i> NuGet SDK ↗</button>
+          <button class="btn btn-ghost" onclick="askCode('sql')"><i class="ti ti-sql"></i> Script SQL CREATE ↗</button>
+        </div>
+      </div>
+    </div>
 
-                if (turbineChart) {
-                    turbineChart.destroy();
-                }
+    <!-- Charts panel with controls and main chart -->
+<!-- ─── PANEL: CHARTS ─── -->
+    <div id="p-chart" class="panel">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-adjustments-horizontal"></i> Controlli</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--text3);margin-bottom:6px;text-transform:uppercase">Periodo</div>
+            <div class="chip-row">
+              <span class="chip on-blue" id="c7" onclick="setPeriod(7,this)">7 gg</span>
+              <span class="chip" id="c14" onclick="setPeriod(14,this)">14 gg</span>
+              <span class="chip" id="c30" onclick="setPeriod(30,this)">30 gg</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--text3);margin-bottom:6px;text-transform:uppercase">Serie visibili</div>
+            <div class="chip-row">
+              <span class="chip on-blue" id="tp" onclick="toggleS('pow',this)"><i class="ti ti-bolt"></i> Potenza</span>
+              <span class="chip on-green" id="tw" onclick="toggleS('wind',this)"><i class="ti ti-wind"></i> Vento</span>
+              <span class="chip on-amber" id="tc" onclick="toggleS('curve',this)"><i class="ti ti-timeline"></i> Power curve</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                turbineChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [
-                            {
-                                label: 'Potenza Reale (kW)',
-                                data: powerValues,
-                                borderColor: 'blue',
-                                yAxisID: 'y',
-                                tension: 0.2
-                            },
-                            {
-                                label: 'Velocità Vento (m/s)',
-                                data: windValues,
-                                borderColor: 'green',
-                                yAxisID: 'y1',
-                                tension: 0.2
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        interaction: { mode: 'index', intersect: false },
-                        scales: {
-                            y: { type: 'linear', display: true, position: 'left' },
-                            y1: {
-                                type: 'linear',
-                                display: true,
-                                position: 'right',
-                                grid: { drawOnChartArea: false }
-                            }
-                        }
-                    }
-                });
-            } catch (error) {
-                statusEl.style.color = '#b00020';
-                statusEl.textContent = `Impossibile caricare il grafico: ${error.message}`;
-            }
-        }
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-line"></i> Produzione reale vs velocità del vento</div>
+        <div class="chart-wrap">
+          <canvas id="mainChart"></canvas>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Potenza reale (kW)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Vento (m/s × scala)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--amber);opacity:.6"></div>Power curve teorica</div>
+        </div>
+      </div>
 
-        document.addEventListener('DOMContentLoaded', fetchAndChart);
-    </script>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="askCode('nuxt-chart')"><i class="ti ti-brand-vue"></i> Componente NUXT ↗</button>
+        <button class="btn btn-amber" onclick="goTo('anom')"><i class="ti ti-zoom-exclamation"></i> Anomalie rilevate</button>
+      </div>
+    </div>
+
+    <!-- Efficiency panel with interpolation calculator and efficiency chart -->
+<!-- ─── PANEL: EFFICIENCY ─── -->
+    <div id="p-eff" class="panel">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-math-function"></i> Formula interpolazione lineare</div>
+        <div class="formula">P(v) = P₁ + (v − v₁) × (P₂ − P₁) / (v₂ − v₁)</div>
+
+        <div class="interp-grid">
+          <div class="interp-field">
+            <label>v₁ — velocità pt.1 (m/s)</label>
+            <input type="number" id="iv1" value="7" step="0.5" min="0" max="25" oninput="calcInterp()">
+          </div>
+          <div class="interp-field">
+            <label>v₂ — velocità pt.2 (m/s)</label>
+            <input type="number" id="iv2" value="7.5" step="0.5" min="0" max="25" oninput="calcInterp()">
+          </div>
+          <div class="interp-field" style="border-color:rgba(59,158,255,0.3)">
+            <label>v — vento misurato (m/s)</label>
+            <input type="number" id="ivm" value="7.2" step="0.1" min="0" max="25" oninput="calcInterp()">
+          </div>
+          <div class="interp-field">
+            <label>P₁ — potenza teorica (kW)</label>
+            <input type="number" id="ip1" value="688.33" step="1" oninput="calcInterp()">
+          </div>
+          <div class="interp-field">
+            <label>P₂ — potenza teorica (kW)</label>
+            <input type="number" id="ip2" value="845.33" step="1" oninput="calcInterp()">
+          </div>
+          <div class="result-box">
+            <div class="rb-label">P(v) risultato</div>
+            <div class="rb-value" id="interp-result">751.00 kW</div>
+          </div>
+        </div>
+
+        <div class="steps-box" id="interp-steps"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-bar"></i> Efficienza giornaliera</div>
+        <div class="chip-row" style="margin-bottom:14px">
+          <span class="chip on-blue" id="ew7" onclick="setEffP(7,this)">7 gg</span>
+          <span class="chip" id="ew14" onclick="setEffP(14,this)">14 gg</span>
+          <span class="chip" id="ew30" onclick="setEffP(30,this)">30 gg</span>
+        </div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="effChart"></canvas>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Efficienza ≥75%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Efficienza &lt;75% — anomalia</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="askCode('efficienza-c#')"><i class="ti ti-code"></i> Implementazione C# ↗</button>
+        <button class="btn btn-ghost" onclick="askCode('relazione')"><i class="ti ti-file-text"></i> Relazione scolastica ↗</button>
+      </div>
+    </div>
+
+    <!-- Anomalies panel listing detected anomalies and analysis -->
+<!-- ─── PANEL: ANOMALIE ─── -->
+    <div id="p-anom" class="panel">
+      <div class="card">
+        <div class="card-title">
+          <i class="ti ti-alert-triangle"></i>
+          Anomalie rilevate —
+          <span id="anom-count-lbl" style="color:var(--red);font-family:var(--font-mono)">0 giorni</span>
+        </div>
+        <div id="anom-list"></div>
+        <div style="margin-top:10px;padding:8px 14px;background:rgba(255,178,63,0.06);border:1px solid rgba(255,178,63,0.2);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-mono);color:var(--amber)">
+          CRITERI: vento &gt; 6 m/s AND potenza &lt; 50% della teorica · potenza = 0 con vento sufficiente
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class="ti ti-notes"></i> Analisi qualitativa</div>
+        <div class="callout blue">
+          <strong>Correlazione vento–potenza:</strong> La power curve mostra una correlazione positiva fino a ~12 m/s (rated power). Oltre tale soglia la turbina regola il pitch per proteggere i componenti meccanici.
+        </div>
+        <div class="callout red">
+          <strong>Anomalia da fermo impianto:</strong> Giorni con vento &gt;8 m/s e produzione nulla o molto bassa indicano manutenzione programmata o guasto meccanico in corso.
+        </div>
+        <div class="callout green">
+          <strong>Degrado prestazioni (Task 2):</strong> Un trend decrescente dell'efficienza nel tempo indica usura dei componenti, accumulo di ghiaccio sulle pale o sporco sul rotore.
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="askCode('relazione-anomalie')"><i class="ti ti-file-text"></i> Scrivi relazione ↗</button>
+        <button class="btn btn-danger" onclick="askCode('rilevamento-anomalie')"><i class="ti ti-code"></i> Codice rilevamento ↗</button>
+        <button class="btn btn-ghost" onclick="goTo('chart')"><i class="ti ti-arrow-left"></i> Torna ai grafici</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Embedded JavaScript for dashboard functionality -->
+<script>
+  // Data generation section for simulating turbine data
+  /* ─── DATA GENERATION ─── */
+  // Array of power curve points [wind speed m/s, power kW]
+  const PC=[[0,0],[3,0],[4,66],[5,154],[6,282],[7,688],[7.5,845],[8,1010],[9,1280],[10,1480],[11,1540],[12,1550],[13,1550],[25,1550],[26,0]];
+  // Function to calculate theoretical power for a given wind speed using linear interpolation
+  function ipc(v){for(let i=0;i<PC.length-1;i++){if(v>=PC[i][0]&&v<=PC[i+1][0]){const[v1,p1]=PC[i],[v2,p2]=PC[i+1];return p1+(v-v1)*(p2-p1)/(v2-v1);}}return 0;}
+  // Cache object to store generated data for different periods to avoid recomputation
+  const cache={};
+  // Function to generate simulated data for the specified number of days
+  function gen(days){
+    if(cache[days]) return cache[days];
+    const l=[],p=[],w=[],cr=[],ef=[],an=[];
+    const now=new Date();
+    for(let i=days-1;i>=0;i--){
+      const d=new Date(now); d.setDate(d.getDate()-i);
+      l.push(d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}));
+      const ws=4+Math.random()*9; w.push(+ws.toFixed(1));
+      const th=ipc(ws); cr.push(+th.toFixed(0));
+      const isA=Math.random()<0.09&&ws>6;
+      const f=isA?(0.2+Math.random()*0.25):(0.78+Math.random()*0.22);
+      const rp=th*f; p.push(+rp.toFixed(0)); ef.push(+(f*100).toFixed(1));
+      if(isA) an.push({date:l[l.length-1],wind:ws.toFixed(1),real:rp.toFixed(0),th:th.toFixed(0)});
+    }
+    cache[days]={labels:l,power:p,wind:w,curve:cr,eff:ef,anomalies:an};
+    return cache[days];
+  }
+
+  // State variables for current settings
+  /* ─── STATE ─── */
+  // Current period for main chart and efficiency chart
+  let curDays=7, effDays=7;
+  // Chart.js instances for main and efficiency charts
+  let mainC=null, effC=null;
+  // Visibility state for chart series
+  let sv={pow:true,wind:true,curve:true};
+
+  // Metrics update function
+  /* ─── METRICS ─── */
+  // Function to calculate and update the displayed metrics from data
+  function updateMetrics(data){
+    const ap=data.power.reduce((a,b)=>a+b,0)/data.power.length;
+    const aw=data.wind.reduce((a,b)=>a+b,0)/data.wind.length;
+    const ae=data.eff.reduce((a,b)=>a+b,0)/data.eff.length;
+    document.getElementById('m-pow').textContent=Math.round(ap);
+    document.getElementById('m-wind').textContent=aw.toFixed(1);
+    document.getElementById('m-eff').textContent=Math.round(ae);
+    document.getElementById('m-anom').textContent=data.anomalies.length;
+    document.getElementById('sb-anom-count').textContent=data.anomalies.length;
+  }
+
+  // Chart building functions
+  /* ─── CHARTS ─── */
+  // Default options for Chart.js charts
+  const chartDefaults={
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,backgroundColor:'#0d1628',titleColor:'#8aabcc',bodyColor:'#e8f4ff',borderColor:'rgba(99,179,255,0.2)',borderWidth:1}},
+  };
+
+  // Function to build the main chart with power, wind, and power curve
+  function buildMain(days){
+    const d=gen(days); updateMetrics(d); buildAnom(d);
+    const ctx=document.getElementById('mainChart').getContext('2d');
+    if(mainC) mainC.destroy();
+    mainC=new Chart(ctx,{
+      data:{labels:d.labels,datasets:[
+        {type:'line',label:'Potenza reale (kW)',data:d.power,borderColor:'#3b9eff',backgroundColor:'rgba(59,158,255,0.05)',borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#3b9eff',tension:0.35,yAxisID:'y',hidden:!sv.pow},
+        {type:'bar',label:'Vento (m/s)',data:d.wind,backgroundColor:'rgba(0,229,160,0.25)',borderColor:'rgba(0,229,160,0.5)',borderWidth:1,yAxisID:'y2',hidden:!sv.wind},
+        {type:'line',label:'Power curve',data:d.curve,borderColor:'rgba(255,178,63,0.65)',borderDash:[6,4],borderWidth:1.5,pointRadius:0,tension:0.35,yAxisID:'y',hidden:!sv.curve}
+      ]},
+      options:{...chartDefaults,scales:{
+        x:{ticks:{color:'#4a6a8a',font:{size:10,family:"'DM Mono',monospace"},maxRotation:40},grid:{color:'rgba(99,179,255,0.04)'},border:{color:'rgba(99,179,255,0.1)'}},
+        y:{position:'left',title:{display:true,text:'kW',color:'#4a6a8a',font:{size:11}},ticks:{color:'#4a6a8a',font:{size:10}},grid:{color:'rgba(99,179,255,0.06)'},border:{color:'rgba(99,179,255,0.1)'}},
+        y2:{position:'right',title:{display:true,text:'m/s',color:'#4a6a8a',font:{size:11}},ticks:{color:'#4a6a8a',font:{size:10}},grid:{display:false},border:{color:'rgba(99,179,255,0.1)'}}
+      }}
+    });
+  }
+
+  // Function to build the efficiency chart
+  function buildEff(days){
+    const d=gen(days);
+    const ctx=document.getElementById('effChart').getContext('2d');
+    if(effC) effC.destroy();
+    const cols=d.eff.map(e=>e<75?'rgba(255,77,106,0.75)':'rgba(0,229,160,0.7)');
+    effC=new Chart(ctx,{
+      type:'bar',
+      data:{labels:d.labels,datasets:[
+        {label:'Efficienza %',data:d.eff,backgroundColor:cols,borderWidth:0,borderRadius:3},
+        {type:'line',label:'Soglia 75%',data:d.labels.map(()=>75),borderColor:'rgba(255,77,106,0.45)',borderDash:[5,4],borderWidth:1.5,pointRadius:0}
+      ]},
+      options:{...chartDefaults,scales:{
+        x:{ticks:{color:'#4a6a8a',font:{size:10,family:"'DM Mono',monospace"},maxRotation:40},grid:{display:false},border:{color:'rgba(99,179,255,0.1)'}},
+        y:{min:0,max:115,ticks:{color:'#4a6a8a',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(99,179,255,0.06)'},border:{color:'rgba(99,179,255,0.1)'}}
+      }}
+    });
+  }
+
+  // Function to build the anomalies list
+  function buildAnom(data){
+    const el=document.getElementById('anom-list');
+    const lbl=document.getElementById('anom-count-lbl');
+    lbl.textContent=data.anomalies.length+' giorni';
+    document.getElementById('sb-anom-count').textContent=data.anomalies.length;
+    if(!data.anomalies.length){
+      el.innerHTML='<div style="padding:14px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--green)"><i class="ti ti-circle-check"></i> Nessuna anomalia nel periodo</div>';
+      return;
+    }
+    el.innerHTML=data.anomalies.map(a=>`
+      <div class="anom-row">
+        <span class="anom-date">${a.date}</span>
+        <span class="anom-stat">Vento: <strong>${a.wind} m/s</strong></span>
+        <span class="anom-stat">Reale: <strong>${a.real} kW</strong></span>
+        <span class="anom-stat">Teorica: <strong>${a.th} kW</strong></span>
+        <span class="anom-tag">Possibile fermo</span>
+      </div>`).join('');
+  }
+
+  // Navigation functions
+  /* ─── NAVIGATION ─── */
+  // Array of panel names
+  const panels=['home','db','chart','eff','anom'];
+
+  // Function to switch to a specific panel
+  function goTo(name){
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    panels.forEach(p=>document.getElementById('p-'+p).classList.remove('active'));
+    const navBtns=document.querySelectorAll('.nav-btn');
+    const idx=panels.indexOf(name);
+    if(idx>=0) navBtns[idx].classList.add('active');
+    document.getElementById('p-'+name).classList.add('active');
+    if(name==='chart') buildMain(curDays);
+    if(name==='eff'){ buildEff(effDays); calcInterp(); }
+    if(name==='anom') buildAnom(gen(curDays));
+  }
+
+  // Functions to change the period for charts
+  /* ─── PERIOD TOGGLES ─── */
+  // Function to set the period for main chart
+  function setPeriod(d,el){
+    curDays=d;
+    document.querySelectorAll('#c7,#c14,#c30').forEach(c=>{c.className='chip';});
+    el.className='chip on-blue';
+    buildMain(d);
+  }
+
+  // Function to set the period for efficiency chart
+  function setEffP(d,el){
+    effDays=d;
+    document.querySelectorAll('#ew7,#ew14,#ew30').forEach(c=>{c.className='chip';});
+    el.className='chip on-blue';
+    buildEff(d);
+  }
+
+  // Function to toggle series visibility
+  /* ─── SERIES TOGGLE ─── */
+  // Function to toggle visibility of a chart series
+  function toggleS(key,el){
+    sv[key]=!sv[key];
+    const clsMap={pow:'on-blue',wind:'on-green',curve:'on-amber'};
+    el.className=sv[key]?'chip '+clsMap[key]:'chip';
+    if(mainC){const idx={pow:0,wind:1,curve:2};mainC.data.datasets[idx[key]].hidden=!sv[key];mainC.update();}
+  }
+
+  // Interpolation calculation for efficiency
+  /* ─── INTERP CALC ─── */
+  // Function to calculate interpolated power and display steps
+  function calcInterp(){
+    const v1=+document.getElementById('iv1').value, v2=+document.getElementById('iv2').value;
+    const vm=+document.getElementById('ivm').value, p1=+document.getElementById('ip1').value;
+    const p2=+document.getElementById('ip2').value;
+    if([v1,v2,vm,p1,p2].some(isNaN)||v2===v1) return;
+    const res=p1+(vm-v1)*(p2-p1)/(v2-v1);
+    document.getElementById('interp-result').textContent=res.toFixed(2)+' kW';
+    document.getElementById('interp-steps').innerHTML=
+      `${p1.toFixed(2)} + (${vm} − ${v1}) × (${p2.toFixed(2)} − ${p1.toFixed(2)}) / (${v2} − ${v1}) = <strong style="color:var(--cyan)">${res.toFixed(2)} kW</strong>`;
+  }
+
+  // Prompts for code generation
+  /* ─── CODE PROMPTS ─── */
+  // Object containing prompts for different code generation requests
+  const prompts={
+    backend:'Genera il controller ASP.NET Core completo per importare il CSV della turbina eolica su SQL Server con EF Core, includendo la mappatura dei timestamp Unix in millisecondi.',
+    frontend:'Crea un componente NUXT 4 con PrimeVue Chart.js che mostri il grafico potenza reale vs velocità del vento con dual y-axis.',
+    sql:'Genera gli script SQL completi per creare le tabelle TurbineData e WeatherData su SQL Server con chiave esterna per data.',
+    relazione:'Aiutami a scrivere la relazione scolastica per Wind Turbine Stats della classe 5°, commentando la correlazione vento-potenza e le anomalie rilevate.',
+    httpclient:'Mostrami il codice C# con HttpClient per chiamare Open-Meteo API alle coordinate 41.030N 15.595E e salvare i dati di vento su SQL Server.',
+    sdk:'Mostrami come usare il package NuGet open-meteo-dotnet-client-sdk in ASP.NET Core per il progetto Wind Turbine Stats.',
+    'nuxt-chart':'Genera il componente NUXT 4 completo con PrimeVue per visualizzare produzione turbina e vento con Chart.js e dual y-axis.',
+    'efficienza-c#':'Come implemento il calcolo dell\'efficienza giornaliera della turbina con interpolazione lineare della power curve in C# ASP.NET Core?',
+    'relazione-anomalie':'Scrivi la sezione della relazione scolastica che analizza le anomalie rilevate nella turbina eolica, con commento su possibili cause.',
+    'rilevamento-anomalie':'Come implemento in C# il rilevamento automatico delle anomalie della turbina confrontando potenza reale e power curve?'
+  };
+
+  // Function to send a prompt for code generation
+  function askCode(key){
+    const t=prompts[key]||`Aiutami con: ${key} per il progetto Wind Turbine Stats`;
+    if(typeof sendPrompt==='function') sendPrompt(t);
+  }
+
+  // Initialization code
+  /* ─── INIT ─── */
+  // Generate initial data for 7 days
+  const initData=gen(7);
+  // Update metrics with initial data
+  updateMetrics(initData);
+  // Build anomalies with initial data
+  buildAnom(initData);
+  // Calculate interpolation
+  calcInterp();
+</script>
 </body>
 </html>
