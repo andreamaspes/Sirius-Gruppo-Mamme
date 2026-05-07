@@ -65,22 +65,22 @@
    - Calcolo risultati 
 
 ## Suddivisione Del Team (3 Persone)
-# Backend (Garberoglio, Dell'uomo)
-- ** Garberoglio: Database **
+#### Backend (Garberoglio, Dell'uomo)
+- **Garberoglio: Database**
     - Import CSV
     - Modellazione DB
     - Query dati
       
-- ** Dell'uomo: API & Meteo **
+- **Dell'uomo: API & Meteo**
     -Integrazione Open Meteo API
     -Logica sincronizzazione dati
   
-# Frontend (Maspes, Dell'uomo)
-- ** Maspes: Grafici **
+#### Frontend (Maspes, Dell'uomo)
+- **Maspes: Grafici**
     -Grafici (VanillaJS)
     -Visualizzazione dati
   
-  - ** Dell'Uomo: Integrazione API ** 
+  - **Dell'Uomo: Integrazione API** 
     -Fetch dati del backend
     -Gestione stato  
 ---
