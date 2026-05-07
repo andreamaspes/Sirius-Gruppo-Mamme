@@ -80,9 +80,9 @@
     - Grafici (VanillaJS)
     - Visualizzazione dati
   
-  - **Dell'Uomo: Integrazione API** 
-    - Fetch dati del backend
-    - Gestione stato  
+- **Dell'Uomo: Integrazione API**
+  - Fetch dati del backend
+  - Gestione stato  
 ---
 
 ## 4. GANTT
