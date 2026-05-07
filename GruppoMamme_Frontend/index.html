@@ -10,6 +10,12 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>
 </head>
 <body>
 
@@ -84,6 +90,9 @@
         <div class="metric-label"><i class="ti ti-alert-triangle"></i> Anomalie</div>
         <div class="metric-value" id="m-anom">—</div>
         <div class="metric-unit">giorni</div>
+      </div>
+      <div id="load-status" style="grid-column: 1/-1; padding: 12px; background: rgba(255,178,63,0.1); border: 1px solid rgba(255,178,63,0.3); border-radius: 8px; text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--amber);">
+        <i class="ti ti-loader-2" style="animation: spin 1s linear infinite;"></i> Caricamento dati...
       </div>
     </div>
 
@@ -352,32 +361,149 @@
 
 <!-- Embedded JavaScript for dashboard functionality -->
 <script>
-  // Data generation section for simulating turbine data
-  /* ─── DATA GENERATION ─── */
-  // Array of power curve points [wind speed m/s, power kW]
-  const PC=[[0,0],[3,0],[4,66],[5,154],[6,282],[7,688],[7.5,845],[8,1010],[9,1280],[10,1480],[11,1540],[12,1550],[13,1550],[25,1550],[26,0]];
-  // Function to calculate theoretical power for a given wind speed using linear interpolation
-  function ipc(v){for(let i=0;i<PC.length-1;i++){if(v>=PC[i][0]&&v<=PC[i+1][0]){const[v1,p1]=PC[i],[v2,p2]=PC[i+1];return p1+(v-v1)*(p2-p1)/(v2-v1);}}return 0;}
-  // Cache object to store generated data for different periods to avoid recomputation
-  const cache={};
-  // Function to generate simulated data for the specified number of days
-  function gen(days){
-    if(cache[days]) return cache[days];
-    const l=[],p=[],w=[],cr=[],ef=[],an=[];
-    const now=new Date();
-    for(let i=days-1;i>=0;i--){
-      const d=new Date(now); d.setDate(d.getDate()-i);
-      l.push(d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}));
-      const ws=4+Math.random()*9; w.push(+ws.toFixed(1));
-      const th=ipc(ws); cr.push(+th.toFixed(0));
-      const isA=Math.random()<0.09&&ws>6;
-      const f=isA?(0.2+Math.random()*0.25):(0.78+Math.random()*0.22);
-      const rp=th*f; p.push(+rp.toFixed(0)); ef.push(+(f*100).toFixed(1));
-      if(isA) an.push({date:l[l.length-1],wind:ws.toFixed(1),real:rp.toFixed(0),th:th.toFixed(0)});
+
+const Base_URL = 'https://localhost:7024';//collegamento all'api
+
+// Global storage per i dati delle API
+let allPowerData = [];
+let allWindData = [];
+
+// Dati di fallback per test quando il backend non è disponibile
+const fallbackData = {
+  power: [
+    {data: "2026-05-01T00:00:00", activePower: 450},
+    {data: "2026-05-02T00:00:00", activePower: 520},
+    {data: "2026-05-03T00:00:00", activePower: 380},
+    {data: "2026-05-04T00:00:00", activePower: 610},
+    {data: "2026-05-05T00:00:00", activePower: 720},
+    {data: "2026-05-06T00:00:00", activePower: 580},
+    {data: "2026-05-07T00:00:00", activePower: 490}
+  ],
+  wind: [
+    {data: "2026-05-01T00:00:00", windspeed: 7.2},
+    {data: "2026-05-02T00:00:00", windspeed: 8.5},
+    {data: "2026-05-03T00:00:00", windspeed: 5.3},
+    {data: "2026-05-04T00:00:00", windspeed: 9.1},
+    {data: "2026-05-05T00:00:00", windspeed: 10.2},
+    {data: "2026-05-06T00:00:00", windspeed: 8.7},
+    {data: "2026-05-07T00:00:00", windspeed: 6.9}
+  ]
+};
+
+// Funzione per fetchare i dati dalle API
+async function fetchAllData() {
+  try {
+    console.log('Fetching data from:', Base_URL);
+    
+    const powerRes = await fetch(`${Base_URL}/active-power-data`);
+    console.log('Power API Response:', powerRes.status, powerRes.statusText);
+    
+    const windRes = await fetch(`${Base_URL}/windspeed-data`);
+    console.log('Wind API Response:', windRes.status, windRes.statusText);
+    
+    if(!powerRes.ok) {
+      throw new Error(`Power API error: ${powerRes.status} ${powerRes.statusText}`);
     }
-    cache[days]={labels:l,power:p,wind:w,curve:cr,eff:ef,anomalies:an};
-    return cache[days];
+    if(!windRes.ok) {
+      throw new Error(`Wind API error: ${windRes.status} ${windRes.statusText}`);
+    }
+    
+    allPowerData = await powerRes.json();
+    allWindData = await windRes.json();
+    
+    console.log('✓ Power data loaded:', allPowerData.length, 'records');
+    console.log('  Primo record:', JSON.stringify(allPowerData[0]));
+    console.log('✓ Wind data loaded:', allWindData.length, 'records');
+    console.log('  Primo record:', JSON.stringify(allWindData[0]));
+    
+    if(allPowerData.length === 0 || allWindData.length === 0) {
+      console.warn('⚠ Avviso: uno o entrambi gli endpoint hanno ritornato dati vuoti');
+    }
+    
+    return true;
+  } catch(err) {
+    console.error('✗ Errore nel caricamento dati:', err);
+    console.log('📌 Usando dati di fallback per il test...');
+    
+    // Usa dati di fallback
+    allPowerData = fallbackData.power;
+    allWindData = fallbackData.wind;
+    
+    console.log('✓ Dati di fallback caricati (' + allPowerData.length + ' giorni)');
+    console.log('⚠ Connetti il backend su ' + Base_URL + ' per usare i dati reali');
+    
+    return true; // Ritorna true per continuare con i dati di fallback
   }
+}
+
+// Funzione per generare i dati dei grafici dai dati reali
+function gen(days) {
+  const labels = [];
+  const power = [];
+  const wind = [];
+  const curve = [];
+  const eff = [];
+  const anomalies = [];
+
+  if(allPowerData.length === 0) {
+    console.warn('⚠ Nessun dato di potenza disponibile');
+    return { labels, power, wind, curve, eff, anomalies };
+  }
+
+  // Crea una mappa dei wind data per data (usando solo la parte data, non l'ora)
+  const windMap = {};
+  allWindData.forEach(w => {
+    const dateOnly = w.data ? w.data.substring(0, 10) : null;
+    if(dateOnly) windMap[dateOnly] = w;
+  });
+
+  console.log('Wind map creata con', Object.keys(windMap).length, 'date uniche');
+
+  // Ordina i dati per power per data e prendi gli ultimi `days` giorni
+  const sortedPower = [...allPowerData].sort((a, b) => new Date(a.data) - new Date(b.data));
+  const recentData = sortedPower.slice(-days);
+
+  console.log(`Processing ${recentData.length} giorni di dati`);
+
+  recentData.forEach(p => {
+    const dateObj = new Date(p.data);
+    const dateStr = dateObj.toLocaleDateString('it-IT', {month: '2-digit', day: '2-digit'});
+    const dateOnly = p.data.substring(0, 10);
+    
+    labels.push(dateStr);
+
+    const powerVal = parseFloat(p.activePower) || 0;
+    power.push(powerVal);
+
+    // Cerca i dati del vento per la stessa data
+    const windData = windMap[dateOnly];
+    const windVal = windData ? (parseFloat(windData.windspeed) || 0) : 0;
+    wind.push(windVal);
+
+    console.log(`  Data: ${dateStr}, Potenza: ${powerVal}, Vento: ${windVal}`);
+
+    // Power curve teorica (approssimazione per turbina)
+    const curveVal = windVal < 3.5 ? 0 : (windVal < 12 ? (windVal - 3) * 100 : 900);
+    curve.push(curveVal);
+
+    // Efficienza
+    const effVal = curveVal > 0 ? (powerVal / curveVal) * 100 : 0;
+    eff.push(Math.min(100, effVal));
+
+    // Rilevamento anomalie: vento > 6 e potenza < 50% teorica
+    if(windVal > 6 && powerVal < curveVal * 0.5) {
+      anomalies.push({
+        date: dateStr,
+        wind: windVal.toFixed(2),
+        real: powerVal.toFixed(2),
+        th: curveVal.toFixed(2)
+      });
+    }
+  });
+
+  console.log(`✓ Generati dati per ${labels.length} giorni`);
+  return { labels, power, wind, curve, eff, anomalies };
+}
 
   // State variables for current settings
   /* ─── STATE ─── */
@@ -552,14 +678,39 @@
 
   // Initialization code
   /* ─── INIT ─── */
-  // Generate initial data for 7 days
-  const initData=gen(7);
-  // Update metrics with initial data
-  updateMetrics(initData);
-  // Build anomalies with initial data
-  buildAnom(initData);
-  // Calculate interpolation
-  calcInterp();
+  // Load data from APIs first, then initialize dashboard
+  (async () => {
+    console.log('=== Inizializzazione Dashboard ===');
+    const loaded = await fetchAllData();
+    const statusEl = document.getElementById('load-status');
+    
+    if(loaded) {
+      const initData = gen(7);
+      updateMetrics(initData);
+      buildAnom(initData);
+      calcInterp();
+      console.log('✓ Dashboard inizializzata con successo');
+      
+      if(statusEl) {
+        if(allPowerData === fallbackData.power) {
+          statusEl.innerHTML = '<i class="ti ti-alert-circle"></i> Modalità TEST - Usando dati di esempio. Connetti il backend per i dati reali.';
+          statusEl.style.background = 'rgba(0,212,255,0.1)';
+          statusEl.style.borderColor = 'rgba(0,212,255,0.3)';
+          statusEl.style.color = 'var(--cyan)';
+        } else {
+          statusEl.style.display = 'none';
+        }
+      }
+    } else {
+      console.error('✗ Impossibile inizializzare il dashboard');
+      if(statusEl) {
+        statusEl.innerHTML = '<i class="ti ti-alert-triangle"></i> Errore: impossibile connettersi all\'API. Apri la console (F12) per i dettagli.';
+        statusEl.style.background = 'rgba(255,77,106,0.1)';
+        statusEl.style.borderColor = 'rgba(255,77,106,0.3)';
+        statusEl.style.color = 'var(--red)';
+      }
+    }
+  })();
 </script>
 </body>
 </html>
