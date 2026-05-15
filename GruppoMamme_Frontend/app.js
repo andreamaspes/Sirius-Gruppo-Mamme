@@ -1,550 +1,196 @@
-// =========================
-// CONFIGURAZIONE BASE
-// =========================
+/*
+  =============================================================================
+  ARCHITETTURA APPLICAZIONE (Vanilla JS)
+  =============================================================================
+  Questo script condensa l'intera logica di presentazione e business dell'app.
+  Si compone di:
+  1. Utilies generali (funzioni di compressione e recupero).
+  2. Elaborazione dei Dati (logica per calcolo anomalie e percentuali di efficienza).
+  3. Controlli Grafici (inizializzazione, distruzione e setup instanze di Chart.js).
+  4. Aggiornamento UI (Modifica esplicita nodale).
+  5. Gestore Eventi (Event Delegation globale su navigazione, input ed elementi interattivi).
+  =============================================================================
+*/
 
-// URL base dell'API (modifica qui se cambia porta o host).
-const Base_URL = 'https://localhost:7024';
+// Alias rapidi per velocizzare selettori DOM e Base URL dell'API.
+const API = 'https://localhost:7024', $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
-// Attiva/disattiva log di debug (true = log, false = silenzioso).
-const DEBUG = false;
-
-// =========================
-// DATI DI FALLBACK (TEST)
-// =========================
-
-// Dati finti usati solo se l'API non risponde.
-const fallbackData = {
-  power: [
-    {data: "2026-05-01T00:00:00", activePower: 450},
-    {data: "2026-05-02T00:00:00", activePower: 520},
-    {data: "2026-05-03T00:00:00", activePower: 380},
-    {data: "2026-05-04T00:00:00", activePower: 610},
-    {data: "2026-05-05T00:00:00", activePower: 720},
-    {data: "2026-05-06T00:00:00", activePower: 580},
-    {data: "2026-05-07T00:00:00", activePower: 490}
-  ],
-  wind: [
-    {data: "2026-05-01T00:00:00", windspeed: 7.2},
-    {data: "2026-05-02T00:00:00", windspeed: 8.5},
-    {data: "2026-05-03T00:00:00", windspeed: 5.3},
-    {data: "2026-05-04T00:00:00", windspeed: 9.1},
-    {data: "2026-05-05T00:00:00", windspeed: 10.2},
-    {data: "2026-05-06T00:00:00", windspeed: 8.7},
-    {data: "2026-05-07T00:00:00", windspeed: 6.9}
-  ]
-};
-
-// =========================
 // STATO GLOBALE
-// =========================
+// `gData`: Immagazzina i raw json scaricati dalle api (o fallback) di potenza e vento.
+// `charts`: Mantiene la referenza alle istanze di Chart.js (essenziale per sovrascriverle via distruzione previa).
+// `state`: Salva filtri utente: pDay (giorni per main), eDay (giorni per eff.), sv (flag visibilità per set di dataset).
+let gData = { pow: [], wind: [] }, charts = { main: null, eff: null };
+let state = { pDay: 7, eDay: 7, sv: { pow: 1, wind: 1, curve: 1 } };
 
-// Dati scaricati da API.
-let allPowerData = [];
-let allWindData = [];
-
-// Periodi attivi per grafici.
-let curDays = 7;
-let effDays = 7;
-
-// Istanze Chart.js (servono per destroy/refresh).
-let mainC = null;
-let effC = null;
-
-// Stato visibilita serie nel grafico principale.
-let sv = { pow: true, wind: true, curve: true };
-
-// Lista pannelli per la navigazione.
-const panels = ['home', 'db', 'chart', 'eff', 'anom'];
-
-// =========================
-// HELPER GENERALI
-// =========================
-
-// Shortcut per recuperare un elemento per id.
-const $ = (id) => document.getElementById(id);
-
-// Log condizionale, utile quando DEBUG e true.
-const dbg = (...args) => { if (DEBUG) console.log(...args); };
-
-// Media sicura: evita NaN se array vuoto.
-function avg(arr) {
-  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-}
-
-// Prende il primo valore non null/undefined tra le chiavi indicate.
-function pickValue(obj, keys) {
-  for (const key of keys) {
-    if (obj && obj[key] !== undefined && obj[key] !== null) {
-      return obj[key];
-    }
-  }
-  return undefined;
-}
-
-// Estrae la data da varianti di nome campo.
-function getDateValue(obj) {
-  return pickValue(obj, ['data', 'Data', 'date', 'Date']);
-}
-
-// Estrae la potenza da varianti di nome campo.
-function getPowerValue(obj) {
-  return pickValue(obj, ['activePower', 'ActivePower', 'activePowerKw', 'ActivePowerKw', 'activePowerKW', 'ActivePowerKW']);
-}
-
-// Estrae il vento da varianti di nome campo.
-function getWindValue(obj) {
-  return pickValue(obj, ['windspeed', 'Windspeed', 'windSpeed', 'WindSpeed', 'windSpeedAvg', 'WindSpeedAvg']);
-}
-
-// Converte una data in chiave giornaliera YYYY-MM-DD.
-function toDateKey(value) {
-  return value ? String(value).substring(0, 10) : null;
-}
-
-// Aggrega i dati per giorno e calcola somma + conteggio.
-function aggregateDaily(data, valueGetter) {
-  const map = {};
-  for (const item of data) {
-    const rawDate = getDateValue(item);
-    const key = toDateKey(rawDate);
-    if (!key) {
-      continue;
-    }
-    const val = parseFloat(valueGetter(item));
-    if (Number.isNaN(val)) {
-      continue;
-    }
-    if (!map[key]) {
-      map[key] = { sum: 0, count: 0 };
-    }
-    map[key].sum += val;
-    map[key].count += 1;
-  }
-  return map;
-}
-
-// =========================
-// FETCH DATI
-// =========================
-
-// Carica dati dalle API. Se fallisce, usa fallback.
-async function fetchAllData() {
-  try {
-    const powerRes = await fetch(`${Base_URL}/active-power-data`);
-    const windRes = await fetch(`${Base_URL}/windspeed-data`);
-
-    if (!powerRes.ok) {
-      throw new Error(`Power API error: ${powerRes.status} ${powerRes.statusText}`);
-    }
-    if (!windRes.ok) {
-      throw new Error(`Wind API error: ${windRes.status} ${windRes.statusText}`);
-    }
-
-    allPowerData = await powerRes.json();
-    allWindData = await windRes.json();
-
-    dbg('Power data:', allPowerData.length, allPowerData[0]);
-    dbg('Wind data:', allWindData.length, allWindData[0]);
-
-    return true;
-  } catch (err) {
-    console.error('Errore nel caricamento dati:', err);
-
-    // Fallback: mantiene l'app funzionante anche senza backend.
-    allPowerData = fallbackData.power;
-    allWindData = fallbackData.wind;
-
-    return true;
-  }
-}
-
-// =========================
-// PREPARAZIONE DATI GRAFICI
-// =========================
-
-// Genera serie per grafici e lista anomalie.
-function gen(days) {
-  const result = { labels: [], power: [], wind: [], curve: [], eff: [], anomalies: [] };
-
-  // Se non ci sono dati potenza, non ha senso proseguire.
-  if (!allPowerData.length) {
-    return result;
-  }
-
-  // Media giornaliera per potenza e vento.
-  const powerDaily = aggregateDaily(allPowerData, getPowerValue);
-  const windDaily = aggregateDaily(allWindData, getWindValue);
-
-  // Ultimi N giorni disponibili (ordinati).
-  const sortedDates = Object.keys(powerDaily).sort((a, b) => new Date(a) - new Date(b));
-  const recentDates = sortedDates.slice(-days);
-
-  // Costruzione serie giorno per giorno.
-  for (const dateKey of recentDates) {
-    const dateObj = new Date(dateKey);
-    const label = dateObj.toLocaleDateString('it-IT', { month: '2-digit', day: '2-digit' });
-
-    const powerBucket = powerDaily[dateKey];
-    const windBucket = windDaily[dateKey];
-
-    const powerVal = powerBucket ? powerBucket.sum / powerBucket.count : 0;
-    const windVal = windBucket ? windBucket.sum / windBucket.count : 0;
-
-    result.labels.push(label);
-    result.power.push(powerVal);
-    result.wind.push(windVal);
-
-    // Power curve teorica semplificata.
-    const curveVal = windVal < 3.5 ? 0 : (windVal < 12 ? (windVal - 3) * 100 : 900);
-    result.curve.push(curveVal);
-
-    // Efficienza percentuale (max 100%).
-    const effVal = curveVal > 0 ? (powerVal / curveVal) * 100 : 0;
-    result.eff.push(Math.min(100, effVal));
-
-    // Anomalia: vento > 6 e potenza < 50% teorica.
-    if (windVal > 6 && powerVal < curveVal * 0.5) {
-      result.anomalies.push({
-        date: label,
-        wind: windVal.toFixed(2),
-        real: powerVal.toFixed(2),
-        th: curveVal.toFixed(2)
-      });
-    }
-  }
-
-  return result;
-}
-
-// =========================
-// METRICHE
-// =========================
-
-// Aggiorna i numeri di testata (metriche).
-function updateMetrics(data) {
-  const ap = avg(data.power);
-  const aw = avg(data.wind);
-  const ae = avg(data.eff);
-
-  $('m-pow').textContent = Math.round(ap);
-  $('m-wind').textContent = aw.toFixed(1);
-  $('m-eff').textContent = Math.round(ae);
-  $('m-anom').textContent = data.anomalies.length;
-  $('sb-anom-count').textContent = data.anomalies.length;
-}
-
-// =========================
-// GRAFICI
-// =========================
-
-// Opzioni base Chart.js condivise.
-const chartDefaults = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      mode: 'index',
-      intersect: false,
-      backgroundColor: '#0d1628',
-      titleColor: '#8aabcc',
-      bodyColor: '#e8f4ff',
-      borderColor: 'rgba(99,179,255,0.2)',
-      borderWidth: 1
-    }
-  }
+/* 
+  DATI DI FALLBACK
+  Vengono attivati in modo completamente silente (eccetto update panel)
+  qualora non riesca a raggiungere il server (API === offline).
+*/
+const fallback = {
+  pow: Array.from({length: 30}, (_,i) => ({ date: `2026-05-${String(i+1).padStart(2,'0')}T00:00:00`, activePower: 400 + Math.random()*400 })),
+  wind: Array.from({length: 30}, (_,i) => ({ date: `2026-05-${String(i+1).padStart(2,'0')}T00:00:00`, windspeed: 4 + Math.random()*8 }))
 };
 
-// Costruisce il grafico principale (potenza + vento + curva).
-function buildMain(days) {
-  const d = gen(days);
-  updateMetrics(d);
-  buildAnom(d);
+// ======================= UTILITIES GLOBALI ============================== //
 
-  const ctx = $('mainChart').getContext('2d');
-  if (mainC) mainC.destroy();
+// Estrazione flessibile. Se un json cambia camelCase/PascalCase, cerca nella lista passata come keys.
+const extract = (d, keys) => d[keys.find(k => d[k] !== undefined)] || 0;
 
-  mainC = new Chart(ctx, {
-    data: {
-      labels: d.labels,
-      datasets: [
-        {
-          type: 'line',
-          label: 'Potenza reale (kW)',
-          data: d.power,
-          borderColor: '#3b9eff',
-          backgroundColor: 'rgba(59,158,255,0.05)',
-          borderWidth: 2,
-          pointRadius: 2.5,
-          pointBackgroundColor: '#3b9eff',
-          tension: 0.35,
-          yAxisID: 'y',
-          hidden: !sv.pow
-        },
-        {
-          type: 'bar',
-          label: 'Vento (m/s)',
-          data: d.wind,
-          backgroundColor: 'rgba(0,229,160,0.25)',
-          borderColor: 'rgba(0,229,160,0.5)',
-          borderWidth: 1,
-          yAxisID: 'y2',
-          hidden: !sv.wind
-        },
-        {
-          type: 'line',
-          label: 'Power curve',
-          data: d.curve,
-          borderColor: 'rgba(255,178,63,0.65)',
-          borderDash: [6, 4],
-          borderWidth: 1.5,
-          pointRadius: 0,
-          tension: 0.35,
-          yAxisID: 'y',
-          hidden: !sv.curve
-        }
-      ]
-    },
-    options: {
-      ...chartDefaults,
-      scales: {
-        x: {
-          ticks: { color: '#4a6a8a', font: { size: 10, family: "'DM Mono',monospace" }, maxRotation: 40 },
-          grid: { color: 'rgba(99,179,255,0.04)' },
-          border: { color: 'rgba(99,179,255,0.1)' }
-        },
-        y: {
-          position: 'left',
-          title: { display: true, text: 'kW', color: '#4a6a8a', font: { size: 11 } },
-          ticks: { color: '#4a6a8a', font: { size: 10 } },
-          grid: { color: 'rgba(99,179,255,0.06)' },
-          border: { color: 'rgba(99,179,255,0.1)' }
-        },
-        y2: {
-          position: 'right',
-          title: { display: true, text: 'm/s', color: '#4a6a8a', font: { size: 11 } },
-          ticks: { color: '#4a6a8a', font: { size: 10 } },
-          grid: { display: false },
-          border: { color: 'rgba(99,179,255,0.1)' }
-        }
-      }
-    }
-  });
-}
+// Evita divisioni per 0 calcolando medie da un array in modo sicuro.
+const avg = arr => arr.length ? arr.reduce((a,b) => a+b, 0)/arr.length : 0;
 
-// Costruisce il grafico efficienza (barre + soglia 75%).
-function buildEff(days) {
-  const d = gen(days);
-  const ctx = $('effChart').getContext('2d');
-  if (effC) effC.destroy();
+// Permette il raggruppamento delle chiavi json in un oggetto mappato a Data 'YYYY-MM-DD' e con sum/count per successive medie.
+const groupDaily = (arr, vKeys) => arr.reduce((acc, obj) => {
+  const k = extract(obj, ['data','Date','date']).substring(0,10);
+  if(k) { acc[k] = acc[k] || {s:0, c:0}; acc[k].s += Number(extract(obj, vKeys))||0; acc[k].c++; }
+  return acc;
+}, {});
 
-  const cols = d.eff.map(e => e < 75 ? 'rgba(255,77,106,0.75)' : 'rgba(0,229,160,0.7)');
 
-  effC = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: d.labels,
-      datasets: [
-        { label: 'Efficienza %', data: d.eff, backgroundColor: cols, borderWidth: 0, borderRadius: 3 },
-        { type: 'line', label: 'Soglia 75%', data: d.labels.map(() => 75), borderColor: 'rgba(255,77,106,0.45)', borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0 }
-      ]
-    },
-    options: {
-      ...chartDefaults,
-      scales: {
-        x: {
-          ticks: { color: '#4a6a8a', font: { size: 10, family: "'DM Mono',monospace" }, maxRotation: 40 },
-          grid: { display: false },
-          border: { color: 'rgba(99,179,255,0.1)' }
-        },
-        y: {
-          min: 0,
-          max: 115,
-          ticks: { color: '#4a6a8a', font: { size: 10 }, callback: v => v + '%' },
-          grid: { color: 'rgba(99,179,255,0.06)' },
-          border: { color: 'rgba(99,179,255,0.1)' }
-        }
-      }
-    }
-  });
-}
+// ================= PROCESSING E LOGICA DI BUSINESS ====================== //
 
-// =========================
-// ANOMALIE
-// =========================
+// `processData`: Applica le metriche in base a un range di X ultimi giorni storici ('days').
+const processData = (days) => {
+  // Raggruppo l'array originale a dizionario chiave(data)-sum e poi ordino gli step storici (days).
+  const pd = groupDaily(gData.pow, ['activePower','ActivePower','activePowerKw']);
+  const wd = groupDaily(gData.wind, ['windspeed','WindSpeed','windSpeedAvg']);
+  const dates = Object.keys(pd).sort().slice(-days);
 
-// Aggiorna lista anomalie e label contatore.
-function buildAnom(data) {
-  const el = $('anom-list');
-  const lbl = $('anom-count-lbl');
-
-  lbl.textContent = data.anomalies.length + ' giorni';
-  $('sb-anom-count').textContent = data.anomalies.length;
-
-  if (!data.anomalies.length) {
-    el.innerHTML = '<div style="padding:14px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--green)"><i class="ti ti-circle-check"></i> Nessuna anomalia nel periodo</div>';
-    return;
-  }
-
-  el.innerHTML = data.anomalies.map(a => `
-    <div class="anom-row">
-      <span class="anom-date">${a.date}</span>
-      <span class="anom-stat">Vento: <strong>${a.wind} m/s</strong></span>
-      <span class="anom-stat">Reale: <strong>${a.real} kW</strong></span>
-      <span class="anom-stat">Teorica: <strong>${a.th} kW</strong></span>
-      <span class="anom-tag">Possibile fermo</span>
-    </div>`).join('');
-}
-
-// =========================
-// NAVIGAZIONE
-// =========================
-
-// Cambia pannello e aggiorna grafici se necessario.
-function goTo(name) {
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  panels.forEach(p => $('p-' + p).classList.remove('active'));
-
-  const navBtns = document.querySelectorAll('.nav-btn');
-  const idx = panels.indexOf(name);
-  if (idx >= 0) {
-    navBtns[idx].classList.add('active');
-  }
-
-  $('p-' + name).classList.add('active');
-
-  if (name === 'chart') {
-    buildMain(curDays);
-  }
-  if (name === 'eff') {
-    buildEff(effDays);
-    calcInterp();
-  }
-  if (name === 'anom') {
-    buildAnom(gen(curDays));
-  }
-}
-
-// =========================
-// CAMBIO PERIODO
-// =========================
-
-// Imposta periodo per grafico principale.
-function setPeriod(d, el) {
-  curDays = d;
-  document.querySelectorAll('#c7,#c14,#c30').forEach(c => { c.className = 'chip'; });
-  el.className = 'chip on-blue';
-  buildMain(d);
-}
-
-// Imposta periodo per grafico efficienza.
-function setEffP(d, el) {
-  effDays = d;
-  document.querySelectorAll('#ew7,#ew14,#ew30').forEach(c => { c.className = 'chip'; });
-  el.className = 'chip on-blue';
-  buildEff(d);
-}
-
-// =========================
-// TOGGLE SERIE
-// =========================
-
-// Mostra/nasconde una serie del grafico principale.
-function toggleS(key, el) {
-  sv[key] = !sv[key];
-
-  const clsMap = { pow: 'on-blue', wind: 'on-green', curve: 'on-amber' };
-  el.className = sv[key] ? 'chip ' + clsMap[key] : 'chip';
-
-  if (mainC) {
-    const idx = { pow: 0, wind: 1, curve: 2 };
-    mainC.data.datasets[idx[key]].hidden = !sv[key];
-    mainC.update();
-  }
-}
-
-// =========================
-// INTERPOLAZIONE
-// =========================
-
-// Calcola P(v) con interpolazione lineare.
-function calcInterp() {
-  const v1 = +$('iv1').value;
-  const v2 = +$('iv2').value;
-  const vm = +$('ivm').value;
-  const p1 = +$('ip1').value;
-  const p2 = +$('ip2').value;
-
-  // Validazione minima: evita divisione per zero e NaN.
-  if ([v1, v2, vm, p1, p2].some(isNaN) || v2 === v1) {
-    return;
-  }
-
-  const res = p1 + (vm - v1) * (p2 - p1) / (v2 - v1);
-
-  $('interp-result').textContent = res.toFixed(2) + ' kW';
-  $('interp-steps').innerHTML =
-    `${p1.toFixed(2)} + (${vm} − ${v1}) × (${p2.toFixed(2)} − ${p1.toFixed(2)}) / (${v2} − ${v1}) = <strong style="color:var(--cyan)">${res.toFixed(2)} kW</strong>`;
-}
-
-// =========================
-// PROMPT CODICE (HELPER)
-// =========================
-
-// Testi predefiniti per i bottoni "Genera codice".
-const prompts = {
-  backend: 'Genera il controller ASP.NET Core completo per importare il CSV della turbina eolica su SQL Server con EF Core, includendo la mappatura dei timestamp Unix in millisecondi.',
-  frontend: 'Crea un componente NUXT 4 con PrimeVue Chart.js che mostri il grafico potenza reale vs velocita del vento con dual y-axis.',
-  sql: 'Genera gli script SQL completi per creare le tabelle TurbineData e WeatherData su SQL Server con chiave esterna per data.',
-  relazione: 'Aiutami a scrivere la relazione scolastica per Wind Turbine Stats della classe 5, commentando la correlazione vento-potenza e le anomalie rilevate.',
-  httpclient: 'Mostrami il codice C# con HttpClient per chiamare Open-Meteo API alle coordinate 41.030N 15.595E e salvare i dati di vento su SQL Server.',
-  sdk: 'Mostrami come usare il package NuGet open-meteo-dotnet-client-sdk in ASP.NET Core per il progetto Wind Turbine Stats.',
-  'nuxt-chart': 'Genera il componente NUXT 4 completo con PrimeVue per visualizzare produzione turbina e vento con Chart.js e dual y-axis.',
-  'efficienza-c#': 'Come implemento il calcolo della efficienza giornaliera della turbina con interpolazione lineare della power curve in C# ASP.NET Core?',
-  'relazione-anomalie': 'Scrivi la sezione della relazione scolastica che analizza le anomalie rilevate nella turbina eolica, con commento su possibili cause.',
-  'rilevamento-anomalie': 'Come implemento in C# il rilevamento automatico delle anomalie della turbina confrontando potenza reale e power curve?'
+  // Trasformo la struttura iterando sui giorni necessari.
+  return dates.reduce((acc, d) => {
+    // Media del giorno in questione (somma/count).
+    const p = pd[d] ? pd[d].s/pd[d].c : 0, w = wd[d] ? wd[d].s/wd[d].c : 0;
+    
+    // Formula euristica semplificata per Power Curve Teorica = (vento).
+    const c = w < 3.5 ? 0 : (w < 12 ? (w-3)*100 : 900);
+    // Efficienza calcolata dalla discrepanza tra reale ed attesa (limite massimo logico protetto al 100%).
+    const e = c > 0 ? Math.min(100, (p/c)*100) : 0;
+    
+    // Preparo le label per le assi X e pusho tutti i set per quel giorno.
+    acc.lbl.push(new Date(d).toLocaleDateString('it-IT',{month:'2-digit',day:'2-digit'}));
+    acc.p.push(p); acc.w.push(w); acc.c.push(c); acc.e.push(e);
+    
+    // Check anomalie: Vento consistente (>6) ma la potenza è inspiegabilmente droppata sotto il 50% di attesa.
+    if(w > 6 && p < c*0.5) acc.anom.push({ d: acc.lbl.at(-1), w: w.toFixed(2), p: p.toFixed(2), c: c.toFixed(2) });
+    return acc;
+  }, { lbl:[], p:[], w:[], c:[], e:[], anom:[] });
 };
 
-// Invia il prompt al gestore esterno, se presente.
-function askCode(key) {
-  const t = prompts[key] || `Aiutami con: ${key} per il progetto Wind Turbine Stats`;
-  if (typeof sendPrompt === 'function') {
-    sendPrompt(t);
-  }
-}
 
-// =========================
-// INIZIALIZZAZIONE
-// =========================
+// ========================== GESTIONE DOM (UI) =========================== //
 
-// Avvia caricamento dati e inizializza UI.
+// `updateUI`: Modifica chirurgicamente la DOM solo sui label dei metric superiori o lista anomale interna.
+const updateUI = () => {
+  const d = processData(state.pDay);
+  $('#m-pow').innerText = Math.round(avg(d.p)); $('#m-wind').innerText = avg(d.w).toFixed(1);
+  $('#m-eff').innerText = Math.round(avg(d.e)); $('#m-anom').innerText = d.anom.length;
+  $('#a-tot').innerText = d.anom.length; $('#sb-anom').innerText = d.anom.length;
+  
+  // Costruisce la UI List Anomalie a concatenazione (mapping dinamico template strings).
+  $('#a-list').innerHTML = d.anom.length ? d.anom.map(a => `<div class="anom-row"><span class="anom-date">${a.d}</span><span>Vento: <b>${a.w} m/s</b> | Reale: <b>${a.p} kW</b> | Teor: <b>${a.c} kW</b></span></div>`).join('') : '<div class="text-green text-xs font-mono mt-1">Nessuna anomalia</div>';
+};
+
+
+// ============================== CHART.JS ================================ //
+
+// Parametri riutilizzabili per Chart
+const cOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }}};
+
+// `buildCharts`: Costruisce e renderizza Main Chart + Efficienza Chart
+const buildCharts = () => {
+  const md = processData(state.pDay), ed = processData(state.eDay);
+  
+  // Previene memory leak grafico (destroy forza la liberazione canvas).
+  if(charts.main) charts.main.destroy(); if(charts.eff) charts.eff.destroy();
+  
+  // 1. Chart Main (Dataset misto a Line, Bar, Dashed Line; con doppio Axis in caso visibilità check)
+  charts.main = new Chart($('#mainChart'), { data: { labels: md.lbl, datasets: [
+    { type:'line', data: md.p, borderColor: '#3b9eff', borderWidth: 2, tension: .3, yAxisID: 'y', hidden: !state.sv.pow },
+    { type:'bar', data: md.w, backgroundColor: 'rgba(0,229,160,.25)', yAxisID: 'y2', hidden: !state.sv.wind },
+    { type:'line', data: md.c, borderColor: 'rgba(255,178,63,.6)', borderDash: [5,5], tension: .3, yAxisID: 'y', hidden: !state.sv.curve }
+  ]}, options: { ...cOpt, scales: { x:{grid:{color:'rgba(99,179,255,.05)'}}, y:{position:'left'}, y2:{position:'right',grid:{display:false}} } }});
+
+  // 2. Chart Efficienza (Varia il bg della bar rossa/verde a seconda se passa una soglia fissa e calcolata dinamicamente).
+  charts.eff = new Chart($('#effChart'), { type: 'bar', data: { labels: ed.lbl, datasets: [
+    { data: ed.e, backgroundColor: ed.e.map(v => v<75 ? 'rgba(255,77,106,.7)' : 'rgba(0,229,160,.7)') },
+    { type:'line', data: ed.lbl.map(()=>75), borderColor: 'rgba(255,77,106,.5)', borderDash:[5,5], pointRadius:0 }
+  ]}, options: { ...cOpt, scales: { y:{min:0, max:115} } }});
+};
+
+
+// ====================== INTERPOLAZIONE LOGICA =========================== //
+
+// `calcI`: Sfrutta la formula matematica fornita (Lineare) per calcolare la potenza da parametri input dell'utente.
+const calcI = () => {
+  // Cast massivo (string to number) dal blocco DOM
+  const [v1, v2, vm, p1, p2] = ['v1','v2','vm','p1','p2'].map(id => +$(`#${id}`).value);
+  
+  // Condizioni per abortirvi calcolo (es invalidità input o errore deltanut).
+  if([v1,v2,vm,p1,p2].some(isNaN) || v2===v1) return;
+  
+  // Formula Lineare
+  const r = p1 + (vm-v1)*(p2-p1)/(v2-v1);
+  $('#i-res').innerText = `${r.toFixed(2)} kW`;
+  // Documenta i passi di soluzione per scopi educativi ed esplorativi utente.
+  $('#i-steps').innerHTML = `${p1} + (${vm} - ${v1}) &times; (${p2} - ${p1}) / (${v2} - ${v1}) = <b>${r.toFixed(2)}</b>`;
+};
+
+
+// ========================= EVENT LISTENERS ============================== //
+
+// EVENT DELEGATION NAVIGAZIONE: Si appende un solo click a #nav e valuta il trigger `data-panel`. Modifica classes attive.
+$('#nav').addEventListener('click', e => {
+  const btn = e.target.closest('.nav-btn'); if(!btn) return;
+  $$('.nav-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  $$('.panel').forEach(p => p.classList.remove('active')); $(`#p-${btn.dataset.panel}`).classList.add('active');
+  // Re-build istantaneo grafici solo se apriamo un pannello grafico compatibile.
+  if(['chart','eff'].includes(btn.dataset.panel)) buildCharts();
+});
+
+// EVENT DELEGATION CAMBIO GIORNI (CHIP 7|14|30). Supporta filtri separati a griglie pDay (Global/Main) / eDay (Efficiency).
+$$('#c-days, #c-eff-days').forEach(g => g.addEventListener('click', e => {
+  if(!e.target.matches('.chip')) return;
+  const isMain = g.id === 'c-days';
+  state[isMain ? 'pDay' : 'eDay'] = +e.target.dataset.days;
+  
+  g.querySelectorAll('.chip').forEach(c => c.className = 'chip'); e.target.className = 'chip on-blue';
+  buildCharts();
+}));
+
+// EVENT DELEGATION CAMBIO SERIE VISIBILI (CHIP toggle Pow/Wind/Curve) - Salva l'inversione booleana del flag corrente e forza render.
+$('#c-series').addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if(!c) return;
+  const k = c.dataset.series; state.sv[k] = !state.sv[k];
+  c.className = state.sv[k] ? `chip on-${k==='pow'?'blue':k==='wind'?'green':'amber'}` : 'chip';
+  buildCharts();
+});
+
+// Event Listener real time sull'aggregato parente Input-Form Efficienza (scatta la func ogni volta un value diviene alterato).
+$('#interp-form').addEventListener('input', calcI);
+
+// Trigger globali window helper (Prompt Esterni/Redirect)
+const askCode = t => window.sendPrompt && sendPrompt(`Prompt: ${t}`);
+window.goTo = p => $(`[data-panel="${p}"]`).click();
+
+// ======================== APP INITIALIZATION ============================ //
+
+// IIFE (Immediately Invoked Function Expression) Asincrona.
+// Scatena le fetch originarie alle route e in caso successo parsa/prepara setup.
 (async () => {
-  const loaded = await fetchAllData();
-  const statusEl = $('load-status');
-
-  if (loaded) {
-    const initData = gen(7);
-    updateMetrics(initData);
-    buildAnom(initData);
-    calcInterp();
-
-    if (statusEl) {
-      if (allPowerData === fallbackData.power) {
-        statusEl.innerHTML = '<i class="ti ti-alert-circle"></i> Modalita TEST - Usando dati di esempio. Connetti il backend per i dati reali.';
-        statusEl.style.background = 'rgba(0,212,255,0.1)';
-        statusEl.style.borderColor = 'rgba(0,212,255,0.3)';
-        statusEl.style.color = 'var(--cyan)';
-      } else {
-        statusEl.style.display = 'none';
-      }
-    }
-  } else {
-    console.error('Impossibile inizializzare il dashboard');
-    if (statusEl) {
-      statusEl.innerHTML = '<i class="ti ti-alert-triangle"></i> Errore: impossibile connettersi alla API. Apri la console (F12) per i dettagli.';
-      statusEl.style.background = 'rgba(255,77,106,0.1)';
-      statusEl.style.borderColor = 'rgba(255,77,106,0.3)';
-      statusEl.style.color = 'var(--red)';
-    }
+  try {
+    const [pR, wR] = await Promise.all([fetch(`${API}/active-power`), fetch(`${API}/windspeed`)]);
+    if(!pR.ok || !wR.ok) throw 1;
+    gData = { pow: await pR.json(), wind: await wR.json() };
+    
+    // Disattiva il banner loader
+    $('#loader').outerHTML = '';
+  } catch {
+    // In caso d'errore (cross origin, downserver, bad call) esegue fallback dummy automatico.
+    gData = fallback;
+    $('#loader').innerHTML = 'TEST MODE - API non disponibile';
   }
+  
+  // Run finale dei cicli visivi essenziali post-fetching.
+  updateUI(); buildCharts(); calcI();
 })();
