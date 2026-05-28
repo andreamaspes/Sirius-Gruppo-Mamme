@@ -1,6 +1,6 @@
 var oggettoGrafico = null;
 // Cambia questa porta con quella corretta del tuo backend .NET
-const BASE_URL = "http://localhost:5121"; 
+const BASE_URL = "https://localhost:7024"; 
 
 function init() {
     // Configura Chart.js per usare testi chiari adatti allo sfondo scuro
