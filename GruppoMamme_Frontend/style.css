@@ -1,185 +1,108 @@
-/* 
-  =========================================
-  CSS VARIABLES (Tema e Sistema Design)
-  Definisce la palette dei colori base, le sfumature (dim),
-  i font usati e il raggio di bordi (rad).
-  Questi token rendono rapida eventuali variazioni di tema.
-  =========================================
-*/
+/* Reset generale e variabili di colore */
 :root {
-  --bg: #070d1a; --bg2: #0d1628; --bg3: #111e35; --surface: #1a2a4a;
-  --border: rgba(99,179,255,0.12);
-  --blue: #3b9eff; --blue-dim: #1a5fa8; --cyan: #00d4ff;
-  --green: #00e5a0; --green-dim: #004d38;
-  --amber: #ffb23f; --amber-dim: #66420a;
-  --red: #ff4d6a; --red-dim: #66001a;
-  --purple: #a78bfa; --purple-dim: #2d1d66;
-  --text: #e8f4ff; --text-dim: #8aabcc;
-  --font: 'Outfit', sans-serif; --font-mono: 'DM Mono', monospace; --font-code: 'Space Mono', monospace;
-  --rad: 8px;
+  --bg-color: #0f172a;       /* Blu notte scuro di sfondo */
+  --card-bg: #1e293b;        /* Sfondo della scheda/card */
+  --text-main: #f8fafc;      /* Testo principale bianco/crema */
+  --text-muted: #94a3b8;     /* Testo secondario grigio */
+  --accent-power: #ff6384;   /* Colore rosa/rosso per la Turbina */
+  --accent-wind: #36a2eb;    /* Colore azzurro per il Vento */
+  --btn-hover: #334155;      /* Sfondo bottone al passaggio del mouse */
+  --border-color: #334155;   /* Bordi sottili */
 }
 
-/* 
-  =========================================
-  RESET E IMPOSTAZIONE BASILARE (DOM)
-  Reset del box-sizing universale e background principale.
-  L'utilizzo dello pseudo ::before nel body crea la
-  gliglia sottostante simulando la topografia.
-  =========================================
-*/
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
-body::before { content:''; position:fixed; inset:0; background: linear-gradient(rgba(59,158,255,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,158,255,.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: -1; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-/* 
-  =========================================
-  CLASSI DI UTILITA' GENERALI
-  Per mimare un approccio funzionale compatto (simile a Tailwind).
-  Evitano il ripetersi frequente in ambito inline CSS.
-  =========================================
-*/
-.flex { display: flex; } .flex-col { flex-direction: column; } .items-center { align-items: center; } .flex-center { display: flex; flex-direction: column; justify-content: center; align-items: center; } .gap-1 { gap: 6px; } .gap-2 { gap: 12px; } .gap-3 { gap: 16px; } .gap-4 { gap: 24px; } .flex-wrap { flex-wrap: wrap; }
-.grid { display: grid; } .grid-2 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: repeat(3, 1fr); }
-.mt-1 { margin-top: 8px; } .mt-2 { margin-top: 16px; } .mb-1 { margin-bottom: 6px; } .mb-2 { margin-bottom: 12px; } .ml-1 { margin-left: 8px; }
-.text-xs { font-size: 11px; } .text-xl { font-size: 24px; } .text-center { text-align: center; }
-.fw-700 { font-weight: 700; } .font-mono { font-family: var(--font-mono); } .font-code { font-family: var(--font-code); }
-.text-blue { color: var(--blue); } .text-cyan { color: var(--cyan); } .text-green { color: var(--green); } .text-amber { color: var(--amber); } .text-red { color: var(--red); } .text-purple { color: var(--purple); } .text-dim { color: var(--text-dim); }
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
 
-/* 
-  =========================================
-  COMPONENTE: TOPBAR (Header layout globale)
-  Fissa in alto, con backdrop-filter per l'effetto blur.
-  =========================================
-*/
-.topbar { position: sticky; top: 0; background: rgba(7,13,26,.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 58px; z-index: 100; }
-.brand { display: flex; gap: 10px; align-items: center; }
-.brand-icon { width: 32px; height: 32px; background: var(--blue); border-radius: var(--rad); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; }
+/* Container principale della Dashboard */
+.dashboard-container {
+  width: 100%;
+  max-width: 1000px;
+  background-color: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  padding: 30px;
+  border: 1px solid var(--border-color);
+}
 
-/* 
-  =========================================
-  COMPONENTE: PILL
-  Elementi usati come label visive arrotondate (es. "Task 1", NUXT).
-  =========================================
-*/
-.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 99px; font-family: var(--font-mono); border: 1px solid currentColor; }
-.pill.blue { background: var(--blue-dim); color: var(--blue); } .pill.green { background: var(--green-dim); color: var(--green); } .pill.amber { background: var(--amber-dim); color: var(--amber); }
+/* Intestazione della Dashboard */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
 
-/* 
-  =========================================
-  COMPONENTE: LAYOUT E SIDEBAR
-  Costituisce la struttura a due colonne sotto la barra superiore.
-  La navigazione è animata sui colori e border ai margini attivi.
-  =========================================
-*/
-.layout { display: flex; flex: 1; overflow: hidden; }
-.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
-.sidebar-title { font-size: 10px; font-weight: 600; color: var(--text-dim); font-family: var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 10px; }
-.nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--rad); border: none; background: transparent; color: var(--text-dim); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: .15s; text-align: left; }
-.nav-btn:hover { background: var(--surface); color: var(--text); }
-.nav-btn.active { background: rgba(59,158,255,.15); color: var(--blue); border: 1px solid rgba(59,158,255,.25); }
-.badge { margin-left: auto; font-size: 10px; background: var(--blue-dim); color: var(--blue); padding: 2px 6px; border-radius: 99px; font-family: var(--font-mono); }
+.dashboard-title h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
 
-/* 
-  =========================================
-  AREA PRINCIPALE (MAIN), PANNELLI E CARDS
-  Le single page view alternano visibilità in display `none` / `flex`.
-  Uso dell'animazione fadeIn per switch fluente tra view.
-  =========================================
-*/
-.main { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
-.panel { display: none; flex-direction: column; gap: 18px; animation: fadeIn .2s ease; } .panel.active { display: flex; }
-.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rad); padding: 18px 20px; }
-.card-title { font-size: 11px; font-weight: 600; color: var(--text-dim); font-family: var(--font-mono); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; } .card-title .ti { color: var(--blue); font-size: 14px; }
+.dashboard-title p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
 
-/* 
-  =========================================
-  COMPONENTE: METRICHE DA HEADER (Quadrati in alto)
-  Bloccol layout dinamico e sfumature diverse al top-border 
-  basate sulla natura della metrica.
-  =========================================
-*/
-.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.metric { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--rad); padding: 16px 18px; border-top: 2px solid transparent; animation: fadeIn .25s ease both; }
-.metric.border-blue { border-top-color: var(--blue); } .metric.border-cyan { border-top-color: var(--cyan); } .metric.border-green { border-top-color: var(--green); } .metric.border-red { border-top-color: var(--red); }
-.metric-lbl { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); margin-bottom: 6px; display: flex; gap: 5px; }
-.metric-val { font-size: 28px; font-weight: 700; font-family: var(--font-code); line-height: 1; }
-.metric-unit { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 2px; }
+/* Stile del Pulsante */
+.btn-refresh {
+  background-color: transparent;
+  color: var(--text-main);
+  border: 2px solid var(--border-color);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+}
 
-/* 
-  =========================================
-  COMPONENTE: BOTTONI (Actions)
-  Varianti basate sulla classe specificata (primary, success...).
-  =========================================
-*/
-.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 99px; border: none; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; border: 1px solid transparent; transition: .15s; } .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--blue); color: #fff; }
-.btn-success { background: var(--green-dim); color: var(--green); border-color: rgba(0,229,160,.25); }
-.btn-danger { background: var(--red-dim); color: var(--red); border-color: rgba(255,77,106,.25); }
-.btn-purple { background: var(--purple-dim); color: var(--purple); border-color: rgba(167,139,250,.25); }
-.btn-ghost { background: var(--surface); color: var(--text-dim); border-color: var(--border); }
+.btn-refresh:hover {
+  background-color: var(--btn-hover);
+  border-color: var(--text-muted);
+  transform: translateY(-1px);
+}
 
-/* 
-  =========================================
-  COMPONENTE: CHIP (Controlli filtri/visibilità)
-  Comportamento come radio-button o toggles grafici.
-  Cambiano il background/border se attivi (.on-blue, .on-green, ecc).
-  =========================================
-*/
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text-dim); }
-.chip.on-blue { background: rgba(59,158,255,.15); color: var(--blue); border-color: rgba(59,158,255,.35); }
-.chip.on-green { background: rgba(0,229,160,.12); color: var(--green); border-color: rgba(0,229,160,.3); }
-.chip.on-amber { background: rgba(255,178,63,.12); color: var(--amber); border-color: rgba(255,178,63,.3); }
+.btn-refresh:active {
+  transform: translateY(1px);
+}
 
-/* 
-  =========================================
-  STILI SPECIFICI DEI CONTENUTI DEI PANNELLI
-  - Flow Step: Processo orizzontale in "Home".
-  - DB Table: Visualizzazione tipo Tabella per schemi db.
-  - Callout: Box testuali informativi per notice e alert in "Anom".
-  - Input box: Contenitori per l'engine interpolazione.
-  =========================================
-*/
-.flow-step { flex: 1; padding: 12px; border-radius: var(--rad); text-align: center; background: rgba(255,255,255,.05); border: 1px solid currentColor; font-size: 11px; font-family: var(--font-mono); }
-.flow-step .ti { font-size: 20px; margin-bottom: 4px; display: block; }
-.flow-step.blue { color: var(--blue); } .flow-step.green { color: var(--green); } .flow-step.amber { color: var(--amber); } .flow-step.purple { color: var(--purple); }
+/* Area del Grafico */
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  background-color: rgba(15, 23, 42, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
 
-.db-table { border-radius: var(--rad); overflow: hidden; border: 1px solid var(--border); }
-.db-head { padding: 8px 12px; font-size: 12px; font-weight: 700; font-family: var(--font-mono); }
-.db-head.blue { background: var(--blue-dim); color: var(--blue); } .db-head.green { background: var(--green-dim); color: var(--green); }
-.db-row { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--bg3); font-size: 11px; font-family: var(--font-mono); }
-
-.chart-wrapper { position: relative; height: 240px; } .h-200 { height: 200px; }
-
-.callout { padding: 10px 14px; border-radius: var(--rad); font-size: 13px; line-height: 1.5; margin-bottom: 8px; border: 1px solid; }
-.callout.blue { background: rgba(59,158,255,.06); border-color: rgba(59,158,255,.2); color: var(--blue); }
-.callout.amber { background: rgba(255,178,63,.06); border-color: rgba(255,178,63,.2); color: var(--amber); }
-.callout.red { background: rgba(255,77,106,.06); border-color: rgba(255,77,106,.2); color: var(--red); }
-.callout.purple { background: rgba(167,139,250,.06); border-color: rgba(167,139,250,.2); color: var(--purple); }
-
-.input-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--rad); padding: 8px 12px; }
-.input-box.border-blue { border-color: var(--blue); }
-.input-box label { display: block; font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); margin-bottom: 4px; }
-.input-box input { width: 100%; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--font-code); font-size: 16px; font-weight: 700; }
-
-.anom-row { display: flex; gap: 10px; padding: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 6px; font-size: 12px; font-family: var(--font-mono); align-items: center; }
-.anom-date { background: var(--red-dim); color: var(--red); padding: 2px 8px; border-radius: 99px; font-weight: 700; }
-
-/* 
-  =========================================
-  IMPOSTAZIONI SCROLLBAR COSTUM
-  Rende globale la scrollbar più estetica.
-  =========================================
-*/
-::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 3px; }
-
-/* 
-  =========================================
-  KEYFRAMES ANIMAZIONI
-  spin: Per il loader della pagina.
-  fadeIn: Ingresso transizionale (dall'alto in basso via Y).
-  =========================================
-*/
-.spin { animation: spin 1s linear infinite; display: inline-block; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+/* Responsive design per schermi piccoli */
+@media (max-width: 600px) {
+  .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+  }
+  
+  .btn-refresh {
+      width: 100%;
+  }
+}

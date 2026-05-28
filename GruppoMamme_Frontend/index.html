@@ -1,236 +1,35 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <!-- Impostazioni viewport per la responsività -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wind Turbine Stats</title>
-  
-  <!-- Caricamento dei font Google utilizzati in tutto il progetto -->
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  
-  <!-- Icone Tabler per l'interfaccia utente -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-  
-  <!-- Caricamento della libreria Chart.js per la generazione dei grafici -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  
-  <!-- Foglio di stile CSS principale -->
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <!-- 
-    TOPBAR: Barra superiore fissa. 
-    Contiene il branding, i metadati geografici e dei badge (pills) informativi. 
-  -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-icon"><i class="ti ti-windmill"></i></div>
-      <div>
-        <div class="fw-700">Wind Turbine Stats</div>
-        <div class="text-xs text-dim font-mono">41.030°N · 15.595°E · Campania</div>
-      </div>
-    </div>
-    <!-- Serie di badge che identificano lo stack tecnico e lo stato dei task -->
-    <div class="flex gap-2">
-      <span class="pill blue"><i class="ti ti-code"></i> ASP.NET Core</span>
-      <span class="pill blue"><i class="ti ti-brand-vue"></i> NUXT 4</span>
-      <span class="pill green"><i class="ti ti-check"></i> Task 1</span>
-      <span class="pill amber"><i class="ti ti-star"></i> Task 2 opzionale</span>
-    </div>
-  </div>
-
-  <!-- 
-    LAYOUT PRINCIPALE: Contenitore flessibile che suddivide lo schermo
-    in una Sidebar di navigazione a sinistra e l'Area Principale a destra.
-  -->
-  <div class="layout">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sirius Dashboard</title>
     
-    <!-- 
-      SIDEBAR (Navigazione): 
-      Tramite gli attributi `data-panel`, il file JavaScript sa quale pannello attivare al click.
-    -->
-    <nav class="sidebar" id="nav">
-      <div class="sidebar-title">Navigazione</div>
-      <button class="nav-btn active" data-panel="home"><i class="ti ti-home"></i> Panoramica</button>
-      <button class="nav-btn" data-panel="db"><i class="ti ti-database"></i> Database</button>
-      <button class="nav-btn" data-panel="chart"><i class="ti ti-chart-line"></i> Grafici</button>
-      <button class="nav-btn" data-panel="eff"><i class="ti ti-calculator"></i> Efficienza <span class="badge">Task 2</span></button>
-      
-      <!-- Il contatore delle anomalie viene aggiornato dinamicamente dal JS sull'id "sb-anom" -->
-      <button class="nav-btn" data-panel="anom">
-        <i class="ti ti-alert-triangle"></i> Anomalie 
-        <span class="badge" id="sb-anom">—</span>
-      </button>
-    </nav>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="index.js"></script>
+</head>
+<body onload="init()">
 
-    <!-- 
-      MAIN (Contenuto): L'area in cui vengono mostrate le metriche in alto, 
-      seguite dai pannelli intercambiabili.
-    -->
-    <main class="main">
-      
-      <!-- METRICHE GLOBALI: Sempre visibili a prescindere dal pannello attivo. -->
-      <div class="metrics">
-        <!-- Potenza: Aggiornato col valore medio -->
-        <div class="metric border-blue">
-          <div class="metric-lbl"><i class="ti ti-bolt"></i> Potenza media</div>
-          <div class="metric-val text-blue" id="m-pow">—</div>
-          <div class="metric-unit">kW / giorno</div>
-        </div>
-        <!-- Vento: Aggiornato col valore medio -->
-        <div class="metric border-cyan">
-          <div class="metric-lbl"><i class="ti ti-wind"></i> Vento medio</div>
-          <div class="metric-val text-cyan" id="m-wind">—</div>
-          <div class="metric-unit">m/s</div>
-        </div>
-        <!-- Efficienza: Aggiornato con la percentuale -->
-        <div class="metric border-green">
-          <div class="metric-lbl"><i class="ti ti-chart-line"></i> Efficienza</div>
-          <div class="metric-val text-green" id="m-eff">—</div>
-          <div class="metric-unit">% media</div>
-        </div>
-        <!-- Anomalie: Mostra il numero assoluto di anomalie rilevate -->
-        <div class="metric border-red">
-          <div class="metric-lbl"><i class="ti ti-alert-triangle"></i> Anomalie</div>
-          <div class="metric-val text-red" id="m-anom">—</div>
-          <div class="metric-unit">giorni</div>
-        </div>
-        <!-- Stato di caricamento (scompare quando i dati sono pronti) -->
-        <div id="loader" class="callout amber text-center"><i class="ti ti-loader-2 spin"></i> Caricamento...</div>
-      </div>
-
-      <!-- ==============================================
-           PANNELLO 1: PANORAMICA (home)
-           Spiega il progetto e il data flow generale.
-           ============================================== -->
-      <div id="p-home" class="panel active">
-        <div class="card">
-          <div class="card-title"><i class="ti ti-route"></i> Flusso dati</div>
-          <!-- Diagramma di flusso orizzontale tramite flessibilità CSS -->
-          <div class="flex gap-2 items-center">
-            <div class="flow-step blue"><i class="ti ti-file-spreadsheet"></i><b>CSV upload</b><br>Unix ms + kW</div><i class="ti ti-chevron-right text-dim"></i>
-            <div class="flow-step green"><i class="ti ti-database"></i><b>SQL Server</b><br>TurbineData</div><i class="ti ti-chevron-right text-dim"></i>
-            <div class="flow-step amber"><i class="ti ti-cloud-download"></i><b>Open-Meteo</b><br>wind_speed</div><i class="ti ti-chevron-right text-dim"></i>
-            <div class="flow-step green"><i class="ti ti-database"></i><b>SQL Server</b><br>WeatherData</div><i class="ti ti-chevron-right text-dim"></i>
-            <div class="flow-step purple"><i class="ti ti-chart-bar"></i><b>Dashboard</b><br>NUXT</div>
-          </div>
-        </div>
-        <!-- Bottoni per testare funzioni esterne (o prompt) o cambiare pannello -->
-        <div class="flex gap-2">
-          <button class="btn btn-primary" onclick="goTo('chart')"><i class="ti ti-chart-line"></i> Grafici</button>
-          <button class="btn btn-purple" onclick="goTo('eff')"><i class="ti ti-calculator"></i> Efficienza</button>
-          <button class="btn btn-danger" onclick="goTo('anom')"><i class="ti ti-alert-triangle"></i> Anomalie</button>
-          <button class="btn btn-success" onclick="askCode('backend')"><i class="ti ti-code"></i> C# ↗</button>
-        </div>
-      </div>
-
-      <!-- ==============================================
-           PANNELLO 2: DATABASE (db)
-           Mostra le tabelle e relative architetture DB.
-           ============================================== -->
-      <div id="p-db" class="panel">
-        <div class="card">
-          <div class="card-title"><i class="ti ti-table"></i> Schema SQL</div>
-          <div class="grid grid-2 gap-3">
-            <div class="db-table"><div class="db-head blue">TurbineData</div><div class="db-row"><span class="text-blue">Id</span><span>PK</span></div><div class="db-row"><span>DateUtc</span><span>date</span></div><div class="db-row"><span>ActivePowerKw</span><span>decimal</span></div></div>
-            <div class="db-table"><div class="db-head green">WeatherData</div><div class="db-row"><span class="text-blue">Id</span><span>PK</span></div><div class="db-row"><span class="text-amber">Date</span><span>FK</span></div><div class="db-row"><span>WindSpeedAvg</span><span>decimal</span></div></div>
-          </div>
-          <div class="callout blue font-code mt-2">JOIN TurbineData t ON t.DateUtc = w.Date</div>
-        </div>
-        <div class="flex gap-2">
-          <button class="btn btn-primary" onclick="askCode('httpclient')"><i class="ti ti-code"></i> HttpClient ↗</button>
-          <button class="btn btn-ghost" onclick="askCode('sql')"><i class="ti ti-sql"></i> Script SQL ↗</button>
-        </div>
-      </div>
-
-      <!-- ==============================================
-           PANNELLO 3: GRAFICI (chart)
-           Contiene il grafico principale e i controlli.
-           ============================================== -->
-      <div id="p-chart" class="panel">
-        <div class="card flex gap-4 items-center flex-wrap">
-          <!-- Filtro Periodo Grafico Main (id = c-days) -->
-          <div>
-            <div class="text-xs text-dim font-mono mb-1">PERIODO</div>
-            <div class="flex gap-1" id="c-days">
-              <span class="chip on-blue" data-days="7">7 gg</span>
-              <span class="chip" data-days="14">14 gg</span>
-              <span class="chip" data-days="30">30 gg</span>
+    <div class="dashboard-container">
+        
+        <header class="dashboard-header">
+            <div class="dashboard-title">
+                <h1>Progetto Sirius</h1>
+                <p>Monitoraggio Telemetria Turbina e Velocità Vento</p>
             </div>
-          </div>
-          <!-- Filtro Visibilità Serie Grafico Main (id = c-series) -->
-          <div>
-            <div class="text-xs text-dim font-mono mb-1">SERIE VISIBILI</div>
-            <div class="flex gap-1" id="c-series">
-              <span class="chip on-blue" data-series="pow"><i class="ti ti-bolt"></i> Potenza</span>
-              <span class="chip on-green" data-series="wind"><i class="ti ti-wind"></i> Vento</span>
-              <span class="chip on-amber" data-series="curve"><i class="ti ti-timeline"></i> Power curve</span>
-            </div>
-          </div>
-        </div>
-        <!-- Wrapper del canvas per Chart.js -->
-        <div class="card">
-          <div class="card-title"><i class="ti ti-chart-line"></i> Produzione vs Vento</div>
-          <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
-        </div>
-      </div>
+            <form onsubmit="return false;">
+                <input type="button" class="btn-refresh" value="Aggiorna Dati" onclick="caricaDatiSirius()">
+            </form>
+        </header>
 
-      <!-- ==============================================
-           PANNELLO 4: EFFICIENZA (eff)
-           Integra una calcolatrice di interpolazione lineare e il grafico di efficienza.
-           ============================================== -->
-      <div id="p-eff" class="panel">
-        <div class="card">
-          <div class="card-title"><i class="ti ti-math-function"></i> Interpolazione</div>
-          <div class="callout purple font-code">P(v) = P₁ + (v − v₁) × (P₂ − P₁) / (v₂ − v₁)</div>
-          
-          <!-- Form con gli input numerici; JS ascolta l'evento 'input' per rifare i calcoli -->
-          <div class="grid grid-3 gap-2" id="interp-form">
-            <div class="input-box"><label>v₁ (m/s)</label><input type="number" id="v1" value="7" step="0.5"></div>
-            <div class="input-box"><label>v₂ (m/s)</label><input type="number" id="v2" value="7.5" step="0.5"></div>
-            <div class="input-box border-blue"><label>v (m/s)</label><input type="number" id="vm" value="7.2" step="0.1"></div>
-            <div class="input-box"><label>P₁ (kW)</label><input type="number" id="p1" value="688.33"></div>
-            <div class="input-box"><label>P₂ (kW)</label><input type="number" id="p2" value="845.33"></div>
-            <!-- Modulo risultato calcolato dinamicamente -->
-            <div class="callout blue flex-center"><div class="text-xs">P(v)</div><div class="text-xl font-code fw-700" id="i-res">751.00 kW</div></div>
-          </div>
-          <!-- Dettaglio dei passaggi eseguiti generato algoritmicamente -->
-          <div class="callout mt-1 font-mono text-xs" id="i-steps"></div>
-        </div>
-        <div class="card">
-          <!-- Filtro Periodo Grafico Efficienza (id = c-eff-days) -->
-          <div class="flex gap-1 mb-2" id="c-eff-days">
-            <span class="chip on-blue" data-days="7">7 gg</span><span class="chip" data-days="14">14 gg</span><span class="chip" data-days="30">30 gg</span>
-          </div>
-          <!-- Canvas per il Chart.js dell'efficienza -->
-          <div class="chart-wrapper h-200"><canvas id="effChart"></canvas></div>
-        </div>
-      </div>
-
-      <!-- ==============================================
-           PANNELLO 5: ANOMALIE (anom)
-           Lista testuale dei giorni critici (vento ok ma potenza scarsa).
-           ============================================== -->
-      <div id="p-anom" class="panel">
-        <div class="card">
-          <!-- Contatore totale delle anomalie -->
-          <div class="card-title"><i class="ti ti-alert-triangle"></i> Anomalie: <span id="a-tot" class="text-red ml-1">0</span></div>
-          <!-- Contenitore in cui JS inietta la lista di nodi "anom-row" -->
-          <div id="a-list"></div>
-          <div class="callout amber mt-2 font-mono text-xs">CRITERI: vento > 6 m/s AND potenza < 50% teorica</div>
-        </div>
-        <div class="card">
-          <div class="callout blue"><b>Correlazione:</b> Positiva fino a ~12 m/s (rated power), poi entra in gioco il pitch.</div>
-          <div class="callout red"><b>Fermo impianto:</b> Vento >8 m/s e prod nulla indicano manutenzione/guasto.</div>
-        </div>
-        <button class="btn btn-primary" onclick="askCode('rilevamento-anomalie')"><i class="ti ti-code"></i> Codice Rilevamento ↗</button>
-      </div>
-
-    </main>
-  </div>
-  
-  <!-- Lo script viene sempre incluso in fondo per non bloccare il DOM content loaded -->
-  <script src="app.js"></script>
+        <main class="chart-wrapper">
+            <canvas id="myChart"></canvas>
+        </main>
+        
+    </div>
+    
 </body>
 </html>
